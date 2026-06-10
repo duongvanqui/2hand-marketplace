@@ -146,4 +146,14 @@ Route::get('/chat/{conversationId}', function ($conversationId) {
     return view('chat.show', compact('conversation'));
 })->name('chat.show');
 
+// Route để bắt đầu hoặc tiếp tục chat về một sản phẩm
+Route::post('/chat/start/{product}', [App\Http\Controllers\ChatController::class, 'startConversation'])
+    ->name('chat.start')
+    ->middleware('auth');
+
+// Trang danh sách hộp thư
+Route::get('/tin-nhan', [App\Http\Controllers\ChatController::class, 'index'])
+    ->name('chat.index')
+    ->middleware('auth');   
+
 require __DIR__ . '/auth.php';

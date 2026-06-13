@@ -96,7 +96,7 @@
             {{-- CỘT PHẢI: FORM CHỐT ĐƠN --}}
             <div class="lg:col-span-5">
                 {{-- ĐÃ BỔ SUNG: bg-white/80 và backdrop-blur-xl cho form --}}
-                <form action="{{ route('checkout.store') }}" method="POST" class="bg-white/80 backdrop-blur-xl p-6 rounded-3xl shadow-xl border border-white sticky top-24">
+                <form action="{{ route('orders.checkout.store') }}" method="POST" class="bg-white/80 backdrop-blur-xl p-6 rounded-3xl shadow-xl border border-white sticky top-24">
                     @csrf
                     
                     <h3 class="font-bold text-lg text-gray-900 border-b border-gray-200 pb-4 mb-5">Thông tin giao hàng & Thanh toán</h3>

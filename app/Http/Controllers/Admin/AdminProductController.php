@@ -7,6 +7,8 @@ use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Notifications\SystemNotification;
+use App\Models\User;
 
 class AdminProductController extends Controller
 {
@@ -74,7 +76,19 @@ class AdminProductController extends Controller
             'reviewed_at'      => now(),
         ]);
 
-        $this->notify($product, 'approved');
+        // Đã XÓA dòng $this->notify cũ ở đây
+
+        // CHỈ SỬ DỤNG HỆ THỐNG THÔNG BÁO MỚI (CHUẨN UX/UI)
+        $owner = User::find($product->user_id);
+        if ($owner) {
+            $owner->notify(new SystemNotification([
+                'type'    => 'success', 
+                'icon'    => 'fa-check',
+                'title'   => 'Tin đăng được duyệt',
+                'message' => 'Sản phẩm <span class="font-bold text-gray-900">"' . $product->title . '"</span> của bạn đã được phê duyệt và hiển thị công khai.',
+                'url'     => route('products.show', $product->slug),
+            ]));
+        }
 
         return back()->with('success', "Đã duyệt tin \"{$product->title}\".");
     }
@@ -98,7 +112,19 @@ class AdminProductController extends Controller
             'reviewed_at'      => now(),
         ]);
 
-        $this->notify($product, 'rejected', $request->rejection_reason);
+        // Đã XÓA dòng $this->notify cũ ở đây
+
+        // CHỈ SỬ DỤNG HỆ THỐNG THÔNG BÁO MỚI KÈM LÝ DO TỪ CHỐI
+        $owner = User::find($product->user_id);
+        if ($owner) {
+            $owner->notify(new SystemNotification([
+                'type'    => 'danger', 
+                'icon'    => 'fa-xmark',
+                'title'   => 'Tin đăng bị từ chối',
+                'message' => 'Sản phẩm <span class="font-bold text-gray-900">"' . $product->title . '"</span> bị từ chối. Lý do: <span class="text-red-600 font-medium">' . $request->rejection_reason . '</span>',
+                'url'     => route('dashboard'), // Hoặc trỏ về trang quản lý bài đăng của user
+            ]));
+        }
 
         return back()->with('success', "Đã từ chối tin \"{$product->title}\".");
     }
@@ -138,33 +164,6 @@ class AdminProductController extends Controller
 
         return back()->with('success', "Đã xóa tin \"{$title}\".");
     }
-
-    // ----------------------------------------------------------------
-    // PRIVATE: Ghi thông báo vào bảng notifications
-    // ----------------------------------------------------------------
-    private function notify(Product $product, string $status, ?string $reason = null): void
-    {
-        $message = match($status) {
-            'approved' => "Tin đăng \"{$product->title}\" đã được duyệt và hiển thị.",
-            'rejected' => "Tin đăng \"{$product->title}\" bị từ chối. Lý do: {$reason}",
-            default    => "Trạng thái tin đăng \"{$product->title}\" đã thay đổi.",
-        };
-
-        \DB::table('notifications')->insert([
-            'id'              => \Str::uuid(),
-            'type'            => 'App\Notifications\ProductStatusChanged',
-            'notifiable_type' => 'App\Models\User',
-            'notifiable_id'   => $product->user_id,
-            'data'            => json_encode([
-                'product_id'    => $product->id,
-                'product_title' => $product->title,
-                'product_slug'  => $product->slug,
-                'status'        => $status,
-                'reason'        => $reason,
-                'message'       => $message,
-            ]),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-    }
+    
+    // ĐÃ XÓA HOÀN TOÀN hàm private function notify() vì không còn cần thiết.
 }

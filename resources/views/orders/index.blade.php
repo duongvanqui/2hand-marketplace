@@ -1,234 +1,273 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 
 @section('title', 'Quản lý đơn hàng - 2HAND')
 
+@section('header_title', 'Quản lý đơn hàng')
+
 @section('content')
-{{-- Gộp 2 biến Alpine.js: Điều khiển Menu và Điều khiển Tab --}}
-<div class="flex min-h-screen bg-gray-100" x-data="{ sidebarOpen: true, tab: 'buying' }">
+<div x-data="{ tab: 'buying' }" class="pb-10">
 
-    {{-- ================= SIDEBAR (MENU TRÁI) ================= --}}
-    <aside :class="sidebarOpen ? 'w-64' : 'w-20'" class="bg-white shadow-xl min-h-screen transition-all duration-300 flex flex-col border-r border-gray-200 shrink-0">
-        <div class="p-4 border-b border-gray-100 flex items-center space-x-3 overflow-hidden">
-            <div class="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold shrink-0">
-                {{ substr(Auth::user()->name, 0, 1) }}
-            </div>
-            <div x-show="sidebarOpen" class="transition-opacity duration-300 overflow-hidden">
-                <h2 class="text-sm font-bold text-gray-800 leading-tight truncate">{{ Auth::user()->name }}</h2>
-                <span class="text-xs text-emerald-500 font-medium">
-                    {{ Auth::user()->role === 'admin' ? 'Quản trị viên' : 'Thành viên' }}
-                </span>
-            </div>
+    {{-- HIỂN THỊ THÔNG BÁO --}}
+    @if(session('success'))
+        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-2xl shadow-sm font-bold mb-6 flex items-center gap-3 animate-fade-in-down">
+            <div class="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-white shrink-0"><i class="fa-solid fa-check"></i></div>
+            {{ session('success') }}
         </div>
+    @endif
+    @if(session('error'))
+        <div class="bg-red-50 border border-red-200 text-red-800 p-4 rounded-2xl shadow-sm font-bold mb-6 flex items-center gap-3 animate-fade-in-down">
+            <div class="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white shrink-0"><i class="fa-solid fa-xmark"></i></div>
+            {{ session('error') }}
+        </div>
+    @endif
 
-        <nav class="flex-1 p-3 space-y-1">
-            <a href="{{ route('products.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-emerald-500 rounded-xl font-medium transition-all group">
-                <i class="fa-solid fa-house text-lg w-6 shrink-0 group-hover:scale-110 transition-transform text-center"></i>
-                <span x-show="sidebarOpen">Xem Trang Chủ</span>
-            </a>
+    {{-- THANH CHUYỂN TAB HIỆN ĐẠI --}}
+    <div class="flex p-1.5 space-x-2 bg-gray-100/80 rounded-2xl w-fit mb-8 border border-gray-200/60 shadow-inner">
+        <button @click="tab = 'buying'" 
+                :class="tab === 'buying' ? 'bg-white text-green-600 shadow-sm border-gray-100' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-200/50 border-transparent'" 
+                class="px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300 flex items-center gap-2 border">
+            <i class="fa-solid fa-bag-shopping text-lg"></i> Đơn mua ({{ count($buyingOrders) }})
+        </button>
+        <button @click="tab = 'selling'" 
+                :class="tab === 'selling' ? 'bg-white text-green-600 shadow-sm border-gray-100' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-200/50 border-transparent'" 
+                class="px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300 flex items-center gap-2 border">
+            <i class="fa-solid fa-store text-lg"></i> Đơn bán ({{ count($sellingOrders) }})
+        </button>
+    </div>
 
-            <div class="border-t border-gray-100 my-2"></div>
-
-            <a href="{{ route('dashboard') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-emerald-500 rounded-xl font-medium transition-all group">
-                <i class="fa-solid fa-chart-pie text-lg w-6 shrink-0 text-center"></i>
-                <span x-show="sidebarOpen">Tổng quan</span>
-            </a>
-
-             <a href="{{ route('orders.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-emerald-500 rounded-xl transition-all group">
-                <i class="fa-solid fa-clipboard-list text-lg w-6 shrink-0 group-hover:scale-110 transition-transform text-center"></i>
-                <span x-show="sidebarOpen">Quản lý Đơn hàng</span>
-            </a>
-
-            <a href="{{ route('wallet.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-emerald-500 rounded-xl transition-all group">
-                <i class="fa-solid fa-wallet text-lg w-6 shrink-0 group-hover:scale-110 transition-transform text-center"></i>
-                <span x-show="sidebarOpen">Ví 2HAND</span>
-            </a>
-
-            <a href="{{ route('profile.edit') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition-all group">
-                <i class="fa-solid fa-user-gear text-lg w-6 shrink-0 group-hover:scale-110 transition-transform text-center"></i>
-                <span x-show="sidebarOpen">Cài đặt tài khoản</span>
-            </a>
-
-            @if(Auth::user()->role === 'admin')
-            <div class="pt-4 my-2 border-t border-gray-100">
-                <p x-show="sidebarOpen" class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Quản trị hệ thống</p>
-                
-                <a href="{{ route('admin.dashboard') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition">
-                <i class="fa-solid fa-chart-pie text-lg w-6 shrink-0 text-center"></i>
-                <span x-show="sidebarOpen">Tổng quan Admin</span>
-            </a>
-                
-                <a href="{{ route('admin.users.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition">
-                    <i class="fa-solid fa-users text-lg w-6 shrink-0 text-center"></i>
-                    <span x-show="sidebarOpen">Quản lý Tài khoản</span>
-                </a>
-                <a href="{{ route('admin.categories.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition mt-1">
-                    <i class="fa-solid fa-list text-lg w-6 shrink-0 text-center"></i>
-                    <span x-show="sidebarOpen">Quản lý Danh mục</span>
-                </a>
-                <a href="{{ route('admin.products.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition mt-1">
-                    <i class="fa-solid fa-box text-lg w-6 shrink-0 text-center"></i>
-                    <span x-show="sidebarOpen">Quản lý sản phẩm</span>
-                </a>
-                
-                <a href="{{ route('admin.wallet.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition mt-1">
-                    <i class="fa-solid fa-vault text-lg w-6 shrink-0 text-center"></i>
-                    <span x-show="sidebarOpen">Quản trị tài chính</span>
-                </a>   
-            
-            </div>
-            @endif
-        </nav>
-    </aside>
-
-    {{-- ================= CONTENT (NỘI DUNG BÊN PHẢI) ================= --}}
-    <main class="flex-1 p-8 overflow-y-auto">
+    {{-- ============================================== --}}
+    {{-- TAB 1: ĐƠN HÀNG TÔI MUA --}}
+    {{-- ============================================== --}}
+    <div x-show="tab === 'buying'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" class="space-y-6">
         
-        {{-- Header của Content --}}
-        <div class="flex items-center justify-between mb-8">
-            <div class="flex items-center space-x-4">
-                <button @click="sidebarOpen = !sidebarOpen" class="p-2 bg-white rounded-lg shadow border border-gray-200 text-gray-600 hover:bg-gray-50 mr-2 outline-none">
-                    <i class="fa-solid fa-bars"></i>
-                </button>
-                <h1 class="text-2xl font-bold text-gray-800">Quản lý đơn hàng</h1>
-            </div>
-        </div>
-
-        {{-- HIỂN THỊ THÔNG BÁO --}}
-        @if(session('success'))
-            <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl shadow-sm font-medium mb-6 flex items-center gap-3">
-                <i class="fa-solid fa-circle-check text-emerald-500 text-xl"></i> {{ session('success') }}
-            </div>
-        @endif
-        @if(session('error'))
-            <div class="bg-red-50 border border-red-200 text-red-800 p-4 rounded-xl shadow-sm font-medium mb-6 flex items-center gap-3">
-                <i class="fa-solid fa-circle-exclamation text-red-500 text-xl"></i> {{ session('error') }}
-            </div>
-        @endif
-
-        {{-- THANH CHUYỂN TAB --}}
-        <div class="bg-white p-1.5 rounded-xl shadow-sm border border-gray-200 inline-flex mb-6">
-            <button @click="tab = 'buying'" :class="tab === 'buying' ? 'bg-emerald-50 text-emerald-600 font-bold' : 'text-gray-500 hover:text-gray-700'" class="px-5 py-2 rounded-lg text-sm transition-all outline-none">
-                <i class="fa-solid fa-bag-shopping mr-1"></i> Đơn mua ({{ count($buyingOrders) }})
-            </button>
-            <button @click="tab = 'selling'" :class="tab === 'selling' ? 'bg-emerald-50 text-emerald-600 font-bold' : 'text-gray-500 hover:text-gray-700'" class="px-5 py-2 rounded-lg text-sm transition-all outline-none">
-                <i class="fa-solid fa-store mr-1"></i> Đơn bán ({{ count($sellingOrders) }})
-            </button>
-        </div>
-
-        {{-- TAB 1: ĐƠN HÀNG TÔI MUA --}}
-        <div x-show="tab === 'buying'" class="space-y-4">
-            @forelse($buyingOrders as $order)
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:border-emerald-200 transition-colors">
-                    <div class="flex gap-4 items-center">
-                        <div class="w-20 h-20 bg-gray-50 rounded-xl overflow-hidden shrink-0 border border-gray-100">
-                            @if($order->product && $order->product->images && $order->product->images->count() > 0)
-                                <img src="{{ asset('storage/' . $order->product->images->first()->image_path) }}" class="w-full h-full object-cover">
-                            @else
-                                <div class="w-full h-full flex items-center justify-center text-gray-300 bg-gray-50"><i class="fa-regular fa-image text-2xl"></i></div>
-                            @endif
+        @forelse($buyingOrders as $order)
+            <div class="bg-white rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-gray-100 overflow-hidden hover:shadow-[0_4px_25px_rgba(16,185,129,0.1)] hover:border-green-200 transition-all duration-300">
+                
+                {{-- Card Header: Thông tin Shop, Trạng thái & THỜI GIAN --}}
+                <div class="px-6 py-4 border-b border-gray-50 bg-gray-50/50 flex flex-wrap gap-4 justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-green-100 to-emerald-50 text-green-700 flex items-center justify-center font-black text-xs border border-white shadow-sm">
+                            {{ substr($order->seller->name ?? 'S', 0, 1) }}
                         </div>
-                        <div>
-                            <h4 class="font-bold text-gray-900 text-lg">{{ $order->product ? $order->product->title : 'Sản phẩm không tồn tại' }}</h4>
-                            <p class="text-xs text-gray-500 mt-1">Người bán: <span class="font-semibold">{{ $order->seller->name }}</span></p>
-                            
-                            <div class="mt-2 text-sm flex items-center gap-2">
-                                <span class="font-black text-red-600">{{ number_format($order->total_amount) }}đ</span>
-                                @if($order->payment_method === 'cod')
-                                    <span class="bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-gray-200">COD</span>
-                                @else
-                                    <span class="bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-blue-100">Bảo đảm</span>
-                                @endif
-                            </div>
-                        </div>
+                        <span class="font-bold text-gray-800 text-sm">{{ $order->seller->name ?? 'Người bán ẩn danh' }}</span>
+                        <a href="#" class="text-[10px] font-semibold bg-white border border-gray-200 text-gray-600 px-2.5 py-1 rounded-lg hover:text-green-600 hover:border-green-300 transition flex items-center gap-1 shadow-sm">
+                            <i class="fa-solid fa-store"></i> Xem shop
+                        </a>
                     </div>
-
-                    {{-- Nút trạng thái --}}
-                    <div class="flex flex-col items-end gap-2 w-full md:w-auto pt-4 md:pt-0 border-t md:border-0 border-gray-50">
-                        @if($order->status === 'pending_shipping' || $order->status === 'paid_escrow')
-                            <span class="bg-blue-50 text-blue-700 text-xs font-bold px-4 py-2 rounded-lg border border-blue-100"><i class="fa-solid fa-hourglass-half mr-1"></i> Chờ gửi hàng</span>
-                        @elseif($order->status === 'shipped')
-                            <span class="bg-yellow-50 text-yellow-700 text-xs font-bold px-4 py-2 rounded-lg border border-yellow-100 mb-1"><i class="fa-solid fa-truck-fast mr-1"></i> Đang giao hàng</span>
-                            <form action="{{ route('orders.confirm', $order->id) }}" method="POST">
-                                @csrf
-                                <button type="submit" onclick="return confirm('Bạn chắc chắn đã nhận đúng hàng?')" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-4 py-2 rounded-lg text-xs transition shadow-sm">
-                                    <i class="fa-solid fa-circle-check mr-1"></i> ĐÃ NHẬN ĐƯỢC HÀNG
-                                </button>
-                            </form>
-                        @elseif($order->status === 'completed')
-                            <span class="bg-emerald-50 text-emerald-700 text-xs font-bold px-4 py-2 rounded-lg border border-emerald-100"><i class="fa-solid fa-check-double mr-1"></i> Hoàn tất</span>
-                        @endif
-                    </div>
-                </div>
-            @empty
-                <div class="text-center py-16 bg-white rounded-3xl border border-gray-100">
-                    <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
-                        <i class="fa-solid fa-box-open text-3xl"></i>
-                    </div>
-                    <p class="text-gray-500 font-medium">Bạn chưa mua đơn hàng nào.</p>
-                </div>
-            @endempty
-        </div>
-
-        {{-- TAB 2: ĐƠN HÀNG TÔI BÁN --}}
-        <div x-show="tab === 'selling'" class="space-y-4" style="display: none;">
-            @forelse($sellingOrders as $order)
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col xl:flex-row justify-between items-start gap-4 hover:border-emerald-200 transition-colors">
                     
-                    {{-- SP INFO --}}
-                    <div class="flex gap-4 items-start w-full xl:w-2/5">
-                        <div class="w-20 h-20 bg-gray-50 rounded-xl overflow-hidden shrink-0 border border-gray-100">
+                    <div class="flex flex-col items-end gap-1.5">
+                        {{-- Badge Trạng thái --}}
+                        <div>
+                            @if($order->status === 'pending_shipping' || $order->status === 'paid_escrow')
+                                <span class="bg-orange-50 text-orange-600 text-xs font-bold px-3 py-1.5 rounded-lg border border-orange-100 flex items-center gap-1.5"><i class="fa-solid fa-box-open"></i> Chờ đóng gói</span>
+                            @elseif($order->status === 'shipped')
+                                <span class="bg-blue-50 text-blue-600 text-xs font-bold px-3 py-1.5 rounded-lg border border-blue-100 flex items-center gap-1.5"><i class="fa-solid fa-truck-fast"></i> Đang giao hàng</span>
+                            @elseif($order->status === 'completed')
+                                <span class="bg-emerald-50 text-emerald-600 text-xs font-bold px-3 py-1.5 rounded-lg border border-emerald-100 flex items-center gap-1.5"><i class="fa-solid fa-check-double"></i> Đã hoàn tất</span>
+                            @endif
+                        </div>
+                        
+                        {{-- Text Thời gian --}}
+                        <div class="text-[11px] text-gray-500 font-medium flex items-center gap-2">
+                            <span>Đặt hàng: {{ $order->created_at->format('H:i - d/m/Y') }}</span>
+                            
+                            @if($order->status === 'shipped')
+                                <span class="text-gray-300">•</span>
+                                <span class="text-blue-500"><i class="fa-solid fa-truck-fast"></i> Đã gửi: {{ $order->updated_at->format('H:i - d/m/Y') }}</span>
+                            @elseif($order->status === 'completed')
+                                <span class="text-gray-300">•</span>
+                                <span class="text-emerald-500"><i class="fa-solid fa-box-open"></i> Nhận hàng: {{ $order->updated_at->format('H:i - d/m/Y') }}</span>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Card Body: Thông tin Sản phẩm --}}
+                <div class="p-6 flex flex-col md:flex-row gap-6">
+                    <a href="{{ $order->product ? route('products.show', $order->product->slug) : '#' }}" class="w-full md:w-28 h-28 bg-gray-50 rounded-2xl overflow-hidden shrink-0 border border-gray-100 shadow-sm block group">
+                        @if($order->product && $order->product->images && $order->product->images->count() > 0)
+                            <img src="{{ asset('storage/' . $order->product->images->first()->image_path) }}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                        @else
+                            <div class="w-full h-full flex items-center justify-center text-gray-300"><i class="fa-regular fa-image text-3xl"></i></div>
+                        @endif
+                    </a>
+                    
+                    <div class="flex-1 flex flex-col justify-center">
+                        <a href="{{ $order->product ? route('products.show', $order->product->slug) : '#' }}" class="font-bold text-gray-900 text-lg hover:text-green-600 transition-colors line-clamp-2">
+                            {{ $order->product ? $order->product->title : 'Sản phẩm đã bị xóa hoặc không tồn tại' }}
+                        </a>
+                        <div class="mt-3 flex items-center gap-3">
+                            @if($order->payment_method === 'cod')
+                                <span class="bg-gray-100 text-gray-600 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase border border-gray-200 flex items-center gap-1"><i class="fa-solid fa-hand-holding-dollar"></i> Thanh toán COD</span>
+                            @else
+                                <span class="bg-green-50 text-green-700 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase border border-green-200 flex items-center gap-1"><i class="fa-solid fa-shield-halved"></i> Thanh toán an toàn</span>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Card Footer: Tổng tiền & Nút Hành động --}}
+                <div class="px-6 py-5 bg-gray-50/30 border-t border-gray-50 flex flex-col md:flex-row justify-end items-center gap-6">
+                    <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+                        <span class="text-sm text-gray-500 font-medium">Thành tiền:</span>
+                        <span class="font-black text-red-500 text-2xl">{{ number_format($order->total_amount) }}<span class="text-lg underline underline-offset-4 ml-0.5">đ</span></span>
+                    </div>
+
+                    @if($order->status === 'shipped')
+                    <div class="w-full md:w-auto">
+                        <form action="{{ route('orders.confirm', $order->id) }}" method="POST">
+                            @csrf
+                            <button type="submit" onclick="return confirm('Bạn xác nhận đã nhận đúng sản phẩm và hài lòng chứ?')" class="w-full md:w-auto bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-bold px-8 py-3 rounded-xl text-sm transition-all shadow-lg shadow-green-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-box-open"></i> ĐÃ NHẬN ĐƯỢC HÀNG
+                            </button>
+                        </form>
+                    </div>
+                    @elseif($order->status === 'completed')
+                    <div class="w-full md:w-auto flex gap-3 justify-end">
+                        <a href="{{ $order->product ? route('products.show', $order->product->slug) : '#' }}" class="px-6 py-2.5 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-sm hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2">
+                            <i class="fa-solid fa-eye"></i> Xem lại tin
+                        </a>
+                        <button class="px-6 py-2.5 bg-white border border-yellow-400 text-yellow-600 font-bold rounded-xl text-sm hover:bg-yellow-50 transition-colors shadow-sm flex items-center gap-2">
+                            <i class="fa-solid fa-star"></i> Đánh giá
+                        </button>
+                    </div>
+                    @endif
+                </div>
+            </div>
+        @empty
+            <div class="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center">
+                <div class="w-28 h-28 bg-gray-50 rounded-full flex items-center justify-center mb-6 border-4 border-white shadow-inner">
+                    <i class="fa-solid fa-bag-shopping text-5xl text-gray-300"></i>
+                </div>
+                <h3 class="text-lg font-black text-gray-800 mb-2">Chưa có đơn hàng nào</h3>
+                <p class="text-gray-500 font-medium mb-6">Bạn chưa thực hiện giao dịch mua hàng nào trên 2HAND.</p>
+                <a href="{{ url('/') }}" class="bg-green-600 text-white font-bold px-8 py-3 rounded-xl hover:bg-green-700 transition-colors shadow-md shadow-green-200">
+                    Bắt đầu mua sắm ngay
+                </a>
+            </div>
+        @endempty
+    </div>
+
+    {{-- ============================================== --}}
+    {{-- TAB 2: ĐƠN HÀNG TÔI BÁN --}}
+    {{-- ============================================== --}}
+    <div x-show="tab === 'selling'" style="display: none;" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" class="space-y-6">
+        
+        @forelse($sellingOrders as $order)
+            <div class="bg-white rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-gray-100 overflow-hidden hover:shadow-[0_4px_25px_rgba(16,185,129,0.1)] hover:border-green-200 transition-all duration-300 flex flex-col">
+                
+                {{-- Header đơn bán & THỜI GIAN --}}
+                <div class="px-6 py-4 border-b border-gray-50 bg-gray-50/50 flex flex-wrap gap-4 justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-black text-xs border border-white shadow-sm">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <span class="text-gray-500 text-sm">Người mua:</span>
+                        <span class="font-bold text-gray-900 text-sm">{{ $order->receiver_name }}</span>
+                    </div>
+                    
+                    <div class="flex flex-col items-end gap-1">
+                        <span class="text-gray-500 text-xs">Mã đơn: <span class="font-bold text-gray-800">#2H{{ str_pad($order->id, 6, '0', STR_PAD_LEFT) }}</span></span>
+                        
+                        {{-- Text Thời gian cho người bán --}}
+                        <div class="text-[11px] text-gray-500 font-medium flex items-center gap-2 mt-0.5">
+                            <span>Khách đặt: {{ $order->created_at->format('H:i - d/m/Y') }}</span>
+                            
+                            @if($order->status === 'shipped')
+                                <span class="text-gray-300">•</span>
+                                <span class="text-blue-500">Bạn gửi: {{ $order->updated_at->format('H:i - d/m/Y') }}</span>
+                            @elseif($order->status === 'completed')
+                                <span class="text-gray-300">•</span>
+                                <span class="text-emerald-500"><i class="fa-solid fa-check-double"></i> Hoàn tất: {{ $order->updated_at->format('H:i - d/m/Y') }}</span>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Body đơn bán (Chia cột: Sản phẩm & Giao hàng) --}}
+                <div class="p-6 flex flex-col xl:flex-row gap-8">
+                    
+                    {{-- Thông tin sản phẩm --}}
+                    <div class="flex gap-5 items-start w-full xl:w-1/2">
+                        <div class="w-24 h-24 bg-gray-50 rounded-2xl overflow-hidden shrink-0 border border-gray-100 shadow-sm">
                             @if($order->product && $order->product->images && $order->product->images->count() > 0)
                                 <img src="{{ asset('storage/' . $order->product->images->first()->image_path) }}" class="w-full h-full object-cover">
                             @else
-                                <div class="w-full h-full flex items-center justify-center text-gray-300 bg-gray-50"><i class="fa-regular fa-image text-2xl"></i></div>
+                                <div class="w-full h-full flex items-center justify-center text-gray-300"><i class="fa-regular fa-image text-3xl"></i></div>
                             @endif
                         </div>
-                        <div>
-                            <h4 class="font-bold text-gray-900 line-clamp-2">{{ $order->product ? $order->product->title : 'Sản phẩm không tồn tại' }}</h4>
-                            <div class="text-sm mt-2">
-                                <span class="font-black text-gray-900">{{ number_format($order->total_amount) }}đ</span>
-                                <span class="ml-2 text-[11px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">Thực nhận: {{ number_format($order->seller_amount) }}đ</span>
+                        <div class="flex flex-col h-full justify-center">
+                            <h4 class="font-bold text-gray-900 text-base line-clamp-2 leading-tight hover:text-green-600 transition-colors cursor-pointer">
+                                {{ $order->product ? $order->product->title : 'Sản phẩm không tồn tại' }}
+                            </h4>
+                            <div class="mt-3 bg-green-50/50 border border-green-100 px-3 py-2 rounded-xl inline-block w-fit">
+                                <p class="text-[11px] text-gray-500 font-medium">Thực nhận sau phí sàn:</p>
+                                <p class="text-lg font-black text-green-600 leading-none mt-1">{{ number_format($order->seller_amount) }}đ</p>
                             </div>
                         </div>
                     </div>
 
-                    {{-- GIAO ĐẾN --}}
-                    <div class="w-full xl:w-2/5 bg-gray-50 p-3 rounded-xl border border-gray-100 text-sm">
-                        <p class="font-bold text-gray-800 mb-1 border-b border-gray-200 pb-1"><i class="fa-solid fa-location-dot text-red-500 mr-1"></i> Giao đến</p>
-                        <p class="mt-1 text-gray-600"><span class="font-semibold text-gray-900">{{ $order->receiver_name }}</span> - {{ $order->phone_number }}</p>
-                        <p class="text-gray-500 truncate" title="{{ $order->shipping_address }}">{{ $order->shipping_address }}</p>
+                    {{-- Thông tin Vận chuyển (Hộp xám nổi bật) --}}
+                    <div class="w-full xl:w-1/2 bg-gray-50/80 p-5 rounded-2xl border border-gray-100 shadow-inner relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-blue-400"></div>
+                        <p class="font-bold text-gray-800 text-sm mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-location-dot text-red-500"></i> Địa chỉ giao hàng
+                        </p>
+                        <div class="space-y-1.5">
+                            <p class="text-sm"><span class="text-gray-500">Người nhận:</span> <span class="font-bold text-gray-900">{{ $order->receiver_name }}</span></p>
+                            <p class="text-sm"><span class="text-gray-500">Điện thoại:</span> <span class="font-bold text-gray-900">{{ $order->phone_number }}</span></p>
+                            <p class="text-sm leading-relaxed"><span class="text-gray-500">Địa chỉ:</span> <span class="font-medium text-gray-800">{{ $order->shipping_address }}</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Footer đơn bán: Action --}}
+                <div class="px-6 py-5 bg-gray-50/30 border-t border-gray-50 flex flex-col md:flex-row justify-between items-center gap-6">
+                    <div class="flex items-center gap-3">
+                        @if($order->payment_method === 'cod')
+                            <div class="bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-bold border border-gray-200">
+                                <i class="fa-solid fa-hand-holding-dollar text-lg"></i> Thu tiền mặt khi giao (COD)
+                            </div>
+                        @else
+                            <div class="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-bold border border-blue-100">
+                                <i class="fa-solid fa-shield-halved text-lg"></i> Người mua đã thanh toán an toàn
+                            </div>
+                        @endif
                     </div>
 
-                    {{-- TRẠNG THÁI --}}
-                    <div class="flex flex-col items-end gap-2 w-full xl:w-1/5 pt-2 xl:pt-0">
+                    <div class="w-full md:w-auto flex justify-end">
                         @if($order->status === 'pending_shipping' || $order->status === 'paid_escrow')
-                            @if($order->payment_method === 'cod')
-                                <span class="text-gray-600 text-xs font-bold mb-2"><i class="fa-solid fa-hand-holding-dollar mr-1"></i> Khách chọn COD</span>
-                            @else
-                                <span class="text-blue-600 text-xs font-bold mb-2"><i class="fa-solid fa-shield-halved mr-1"></i> Đã nhận cọc Web</span>
-                            @endif
-                            <form action="{{ route('orders.ship', $order->id) }}" method="POST" class="w-full">
+                            <form action="{{ route('orders.ship', $order->id) }}" method="POST" class="w-full md:w-auto">
                                 @csrf
-                                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-sm">
-                                    XÁC NHẬN ĐÃ GỬI HÀNG
+                                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-3 rounded-xl text-sm transition-all shadow-md shadow-blue-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-truck-fast"></i> XÁC NHẬN ĐÃ GỬI HÀNG
                                 </button>
                             </form>
                         @elseif($order->status === 'shipped')
-                            <span class="bg-yellow-50 text-yellow-700 text-xs font-bold px-4 py-2 rounded-lg border border-yellow-100"><i class="fa-solid fa-truck-fast mr-1"></i> Đang vận chuyển</span>
+                            <span class="bg-yellow-50 text-yellow-700 font-bold px-6 py-3 rounded-xl border border-yellow-200 flex items-center gap-2 text-sm shadow-sm">
+                                <i class="fa-solid fa-box-open"></i> Đang chờ khách xác nhận nhận hàng
+                            </span>
                         @elseif($order->status === 'completed')
-                            <span class="bg-emerald-50 text-emerald-700 text-xs font-bold px-4 py-2 rounded-lg border border-emerald-100"><i class="fa-solid fa-check-double mr-1"></i> Hoàn tất</span>
+                            <span class="bg-emerald-50 text-emerald-700 font-bold px-6 py-3 rounded-xl border border-emerald-200 flex items-center gap-2 text-sm shadow-sm">
+                                <i class="fa-solid fa-check-double"></i> Đơn hàng hoàn tất
+                            </span>
                         @endif
                     </div>
                 </div>
-            @empty
-                <div class="text-center py-16 bg-white rounded-3xl border border-gray-100">
-                    <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
-                        <i class="fa-solid fa-store-slash text-3xl"></i>
-                    </div>
-                    <p class="text-gray-500 font-medium">Bạn chưa có đơn bán nào.</p>
+            </div>
+        @empty
+            <div class="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center">
+                <div class="w-28 h-28 bg-gray-50 rounded-full flex items-center justify-center mb-6 border-4 border-white shadow-inner">
+                    <i class="fa-solid fa-store-slash text-5xl text-gray-300"></i>
                 </div>
-            @endforelse
-        </div>
-    </main>
+                <h3 class="text-lg font-black text-gray-800 mb-2">Chưa có đơn bán nào</h3>
+                <p class="text-gray-500 font-medium mb-6">Bạn chưa phát sinh giao dịch bán hàng nào trên hệ thống.</p>
+                <a href="{{ route('products.create') }}" class="bg-green-600 text-white font-bold px-8 py-3 rounded-xl hover:bg-green-700 transition-colors shadow-md shadow-green-200">
+                    Đăng tin bán ngay
+                </a>
+            </div>
+        @endforelse
+    </div>
+
 </div>
 @endsection

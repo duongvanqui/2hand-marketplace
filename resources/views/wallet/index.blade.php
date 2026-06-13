@@ -1,186 +1,179 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 
 @section('title', 'Ví 2HAND của bạn')
+@section('header_title', 'Quản lý Ví 2HAND')
 
 @section('content')
-<div class="flex min-h-screen bg-gray-100" x-data="{ sidebarOpen: true }">
-
-    {{-- SIDEBAR BÊN TRÁI (HIỆU ỨNG THU PHÓNG GIỐNG DASHBOARD) --}}
-    <aside :class="sidebarOpen ? 'w-64' : 'w-20'" class="bg-white shadow-xl min-h-screen transition-all duration-300 flex flex-col border-r border-gray-200 shrink-0">
-        <div class="p-4 border-b border-gray-100 flex items-center space-x-3 overflow-hidden">
-            <div class="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold shrink-0 uppercase">
-                {{ substr(Auth::user()->name, 0, 1) }}
-            </div>
-            <div x-show="sidebarOpen" class="transition-opacity duration-300 overflow-hidden">
-                <h2 class="text-sm font-bold text-gray-800 leading-tight truncate">{{ Auth::user()->name }}</h2>
-                <span class="text-xs text-green-500 font-medium">
-                    {{ Auth::user()->role === 'admin' ? 'Quản trị viên' : 'Thành viên' }}
-                </span>
-            </div>
+<div class="pb-10">
+    
+    {{-- HIỂN THỊ THÔNG BÁO --}}
+    @if(session('success'))
+        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-2xl shadow-sm font-bold mb-6 flex items-center gap-3 animate-fade-in-down">
+            <div class="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-white shrink-0"><i class="fa-solid fa-check"></i></div>
+            {{ session('success') }}
         </div>
-
-        <nav class="flex-1 p-3 space-y-1">
-            <a href="{{ route('products.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-emerald-500 rounded-xl font-medium transition-all group">
-                <i class="fa-solid fa-house text-lg w-6 shrink-0 group-hover:scale-110 transition-transform text-center"></i>
-                <span x-show="sidebarOpen">Xem Trang Chủ</span>
-            </a>
-
-            <div class="border-t border-gray-100 my-2"></div>
-
-            {{-- Nút Tổng quan (Chuyển về trạng thái bình thường) --}}
-            <a href="{{ route('dashboard') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-emerald-500 rounded-xl transition-all group">
-                <i class="fa-solid fa-chart-pie text-lg w-6 shrink-0 group-hover:scale-110 transition-transform text-center"></i>
-                <span x-show="sidebarOpen">Tổng quan</span>
-            </a>
-
-            {{-- Nút Quản lý Đơn hàng --}}
-            <a href="{{ route('orders.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-emerald-500 rounded-xl transition-all group">
-                <i class="fa-solid fa-clipboard-list text-lg w-6 shrink-0 group-hover:scale-110 transition-transform text-center"></i>
-                <span x-show="sidebarOpen">Quản lý Đơn hàng</span>
-            </a>
-
-            {{-- NÚT VÍ 2HAND (ĐANG ACTIVE - MÀU XANH) --}}
-            <a href="{{ route('wallet.index') }}" class="flex items-center space-x-3 px-4 py-3 bg-emerald-50 text-emerald-600 rounded-xl font-medium transition-all">
-                <i class="fa-solid fa-wallet text-lg w-6 shrink-0 text-center"></i>
-                <span x-show="sidebarOpen">Ví 2HAND</span>
-            </a>
-
-            <a href="{{ route('profile.edit') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition-all group">
-                <i class="fa-solid fa-user-gear text-lg w-6 shrink-0 group-hover:scale-110 transition-transform text-center"></i>
-                <span x-show="sidebarOpen">Cài đặt tài khoản</span>
-            </a>
-
-            @if(Auth::user()->role === 'admin')
-            <div class="pt-4 my-2 border-t border-gray-100">
-                <p x-show="sidebarOpen" class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Quản trị hệ thống</p>
-                
-                <a href="{{ route('admin.dashboard') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition">
-                    <i class="fa-solid fa-chart-pie text-lg w-6 shrink-0 text-center"></i>
-                    <span x-show="sidebarOpen">Tổng quan Admin</span>
-                </a>
-                
-                <a href="{{ route('admin.users.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition">
-                    <i class="fa-solid fa-users text-lg w-6 shrink-0 text-center"></i>
-                    <span x-show="sidebarOpen">Quản lý Tài khoản</span>
-                </a>
-                <a href="{{ route('admin.categories.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition mt-1">
-                    <i class="fa-solid fa-list text-lg w-6 shrink-0 text-center"></i>
-                    <span x-show="sidebarOpen">Quản lý Danh mục</span>
-                </a>
-                <a href="{{ route('admin.products.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition mt-1">
-                    <i class="fa-solid fa-box text-lg w-6 shrink-0 text-center"></i>
-                    <span x-show="sidebarOpen">Quản lý sản phẩm</span>
-                </a>
-                
-                <a href="{{ route('admin.wallet.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition mt-1">
-                    <i class="fa-solid fa-vault text-lg w-6 shrink-0 text-center"></i>
-                    <span x-show="sidebarOpen">Quản trị tài chính</span>
-                </a>
-            </div>
-            @endif
-        </nav>
-    </aside>
-
-    {{-- NỘI DUNG CHÍNH (VÍ 2HAND) --}}
-    <main class="flex-1 p-8 overflow-y-auto">
-        <div class="flex items-center justify-between mb-8">
-            <div class="flex items-center space-x-4">
-                {{-- Nút bấm thu/phóng Sidebar --}}
-                <button @click="sidebarOpen = !sidebarOpen" class="p-2 bg-white rounded-lg shadow border border-gray-200 text-gray-600 hover:bg-gray-50 mr-2 transition-all">
-                    <i class="fa-solid fa-bars"></i>
-                </button>
-                <h1 class="text-2xl font-bold text-gray-800">Quản lý Ví 2HAND</h1>
-            </div>
+    @endif
+    @if(session('error'))
+        <div class="bg-red-50 border border-red-200 text-red-800 p-4 rounded-2xl shadow-sm font-bold mb-6 flex items-center gap-3 animate-fade-in-down">
+            <div class="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white shrink-0"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            {{ session('error') }}
         </div>
+    @endif
 
-        @if(session('success'))
-            <div class="bg-emerald-50 text-emerald-800 p-4 rounded-xl mb-6 font-bold"><i class="fa-solid fa-check"></i> {{ session('success') }}</div>
-        @endif
-        @if(session('error'))
-            <div class="bg-red-50 text-red-800 p-4 rounded-xl mb-6 font-bold"><i class="fa-solid fa-triangle-exclamation"></i> {{ session('error') }}</div>
-        @endif
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {{-- ============================================== --}}
+        {{-- CỘT TRÁI: THÔNG TIN SỐ DƯ & NÚT RÚT TIỀN --}}
+        {{-- ============================================== --}}
+        <div class="lg:col-span-1 space-y-6">
+            
+            {{-- Thẻ Số Dư (Design kiểu Credit Card) --}}
+            <div class="relative bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600 rounded-3xl p-8 shadow-xl shadow-emerald-200/50 text-white overflow-hidden transform transition-transform hover:-translate-y-1 duration-300">
+                {{-- Họa tiết trang trí (Decorations) --}}
+                <div class="absolute -right-10 -top-10 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
+                <div class="absolute -left-10 -bottom-10 w-32 h-32 bg-teal-900 opacity-20 rounded-full blur-xl"></div>
+                <i class="fa-brands fa-nfc-symbol absolute top-8 right-8 text-3xl opacity-50"></i>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {{-- CỘT TRÁI: THÔNG TIN SỐ DƯ & NÚT RÚT TIỀN --}}
-            <div class="lg:col-span-1 space-y-6">
-                <div class="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl p-6 shadow-lg shadow-emerald-200 text-white relative overflow-hidden">
-                    <div class="absolute -right-10 -top-10 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl"></div>
-                    <p class="text-emerald-100 font-medium mb-1"><i class="fa-solid fa-wallet"></i> Số dư khả dụng</p>
-                    <h2 class="text-4xl font-black mb-6">{{ number_format($user->balance) }} <span class="text-xl">VND</span></h2>
-                    <p class="text-xs text-emerald-100">Chủ ví: {{ $user->name }}</p>
-                </div>
-
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 class="font-bold text-gray-800 mb-4 border-b pb-2">Tạo lệnh rút tiền</h3>
-                    <form action="{{ route('wallet.withdraw') }}" method="POST" class="space-y-4">
-                        @csrf
-                        <div>
-                            <label class="text-xs font-bold text-gray-500 uppercase">Số tiền cần rút (Tối thiểu 50k)</label>
-                            <input type="number" name="amount" min="50000" max="{{ $user->balance }}" required class="w-full mt-1 p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-emerald-500 transition-all" placeholder="VD: 100000">
-                        </div>
-                        <div>
-                            <label class="text-xs font-bold text-gray-500 uppercase">Thông tin nhận tiền</label>
-                            <textarea name="bank_info" required rows="3" class="w-full mt-1 p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-emerald-500 transition-all" placeholder="VD: Vietcombank - 0123456789 - DUONG VAN QUI"></textarea>
-                        </div>
-                        <button type="submit" class="w-full bg-gray-900 text-white font-bold py-3 rounded-xl hover:bg-black transition-all shadow-md {{ $user->balance < 50000 ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg' }}" {{ $user->balance < 50000 ? 'disabled' : '' }}>
-                            Gửi Yêu Cầu Rút
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            {{-- CỘT PHẢI: LỊCH SỬ GIAO DỊCH --}}
-            <div class="lg:col-span-2">
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-full">
-                    <h3 class="font-bold text-lg text-gray-800 mb-6">Lịch sử giao dịch</h3>
+                <div class="relative z-10">
+                    <p class="text-emerald-50 font-semibold mb-2 text-sm uppercase tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-wallet"></i> Số dư khả dụng
+                    </p>
+                    <h2 class="text-4xl font-black mb-8 tracking-tight drop-shadow-sm">
+                        {{ number_format($user->balance) }} <span class="text-xl font-bold opacity-80">VND</span>
+                    </h2>
                     
-                    <div class="space-y-4">
-                        {{-- Hiển thị các lệnh rút tiền (Tiền ra) --}}
-                        @foreach($withdrawals as $w)
-                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 transition-all hover:shadow-sm">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-arrow-up"></i></div>
-                                    <div>
-                                        <p class="font-bold text-gray-800 leading-tight">Rút tiền về ngân hàng</p>
-                                        <p class="text-xs text-gray-500 mt-0.5">{{ $w->created_at->format('H:i d/m/Y') }}</p>
-                                    </div>
-                                </div>
-                                <div class="text-right shrink-0">
-                                    <p class="font-black text-red-600">-{{ number_format($w->amount) }}đ</p>
-                                    @if($w->status == 'pending') <span class="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded font-bold">Đang xử lý</span>
-                                    @elseif($w->status == 'approved') <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-bold">Thành công</span>
-                                    @endif
-                                </div>
-                            </div>
-                        @endforeach
-
-                        {{-- Hiển thị tiền bán hàng (Tiền vào) --}}
-                        @foreach($incomeHistory as $order)
-                            <div class="flex items-center justify-between p-4 bg-emerald-50/30 rounded-xl border border-emerald-100 transition-all hover:shadow-sm">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-arrow-down"></i></div>
-                                    <div>
-                                        <p class="font-bold text-gray-800 leading-tight">Bán: {{ Str::limit($order->product->title, 40) }}</p>
-                                        <p class="text-xs text-gray-500 mt-0.5">Người mua đã xác nhận nhận hàng</p>
-                                    </div>
-                                </div>
-                                <div class="text-right shrink-0">
-                                    <p class="font-black text-emerald-600">+{{ number_format($order->seller_amount) }}đ</p>
-                                    <span class="text-[10px] text-gray-400">Đã trừ {{ number_format($order->fee_amount) }}đ phí</span>
-                                </div>
-                            </div>
-                        @endforeach
-
-                        @if($withdrawals->isEmpty() && $incomeHistory->isEmpty())
-                            <div class="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                                <i class="fa-solid fa-receipt text-3xl text-gray-300 mb-3"></i>
-                                <p class="text-gray-500 font-medium">Chưa có giao dịch nào phát sinh.</p>
-                            </div>
-                        @endif
+                    <div class="flex justify-between items-end">
+                        <div>
+                            <p class="text-[10px] text-emerald-100 uppercase tracking-widest mb-0.5">Chủ ví</p>
+                            <p class="font-bold text-lg tracking-wide uppercase">{{ $user->name }}</p>
+                        </div>
+                        <div class="text-emerald-100/50 font-black text-2xl italic">
+                            2HAND
+                        </div>
                     </div>
                 </div>
             </div>
+
+            {{-- Form Yêu cầu Rút tiền --}}
+            <div class="bg-white p-6 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-gray-100">
+                <h3 class="font-bold text-gray-800 mb-5 flex items-center gap-2">
+                    <i class="fa-solid fa-money-bill-transfer text-emerald-500"></i> Tạo lệnh rút tiền
+                </h3>
+                
+                <form action="{{ route('wallet.withdraw') }}" method="POST" class="space-y-5">
+                    @csrf
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Số tiền cần rút (Tối thiểu 50k)</label>
+                        <div class="relative mt-1.5">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                <span class="text-gray-400 font-bold">₫</span>
+                            </div>
+                            <input type="number" name="amount" min="50000" max="{{ $user->balance }}" required 
+                                class="w-full pl-10 pr-4 py-3 bg-gray-50/80 border border-gray-200 rounded-xl outline-none focus:bg-white focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all font-bold text-gray-800" 
+                                placeholder="VD: 100000">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Thông tin nhận tiền</label>
+                        <textarea name="bank_info" required rows="3" 
+                            class="w-full mt-1.5 p-4 bg-gray-50/80 border border-gray-200 rounded-xl outline-none focus:bg-white focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all text-sm text-gray-800 resize-none" 
+                            placeholder="VD: Vietcombank&#10;STK: 0123456789&#10;Tên: DUONG VAN QUI"></textarea>
+                    </div>
+
+                    <button type="submit" 
+                        class="w-full font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2
+                        {{ $user->balance < 50000 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-lg shadow-emerald-200 transform hover:-translate-y-0.5' }}" 
+                        {{ $user->balance < 50000 ? 'disabled' : '' }}>
+                        <i class="fa-solid fa-paper-plane"></i> Gửi Yêu Cầu Rút
+                    </button>
+                    
+                    @if($user->balance < 50000)
+                        <p class="text-[11px] text-center text-red-500 font-medium mt-2"><i class="fa-solid fa-circle-info"></i> Số dư của bạn chưa đạt mức tối thiểu để rút.</p>
+                    @endif
+                </form>
+            </div>
         </div>
-    </main>
+
+        {{-- ============================================== --}}
+        {{-- CỘT PHẢI: LỊCH SỬ GIAO DỊCH --}}
+        {{-- ============================================== --}}
+        <div class="lg:col-span-2">
+            <div class="bg-white p-6 md:p-8 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-gray-100 h-full flex flex-col">
+                <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
+                    <h3 class="font-bold text-xl text-gray-800 flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left text-emerald-500"></i> Lịch sử giao dịch
+                    </h3>
+                </div>
+                
+                <div class="space-y-4 flex-1">
+                    
+                    {{-- DANH SÁCH TIỀN RA (RÚT TIỀN) --}}
+                    @foreach($withdrawals as $w)
+                        <div class="flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 transition-all hover:shadow-md hover:border-gray-200 group">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-xl bg-red-50 text-red-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-arrow-up-right-dots text-lg"></i>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-gray-800 text-sm md:text-base leading-tight">Yêu cầu rút tiền</p>
+                                    <p class="text-[11px] text-gray-400 mt-1 font-medium"><i class="fa-regular fa-clock mr-1"></i> {{ $w->created_at->format('H:i - d/m/Y') }}</p>
+                                </div>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <p class="font-black text-red-500 text-base md:text-lg">-{{ number_format($w->amount) }}<span class="text-xs ml-0.5">đ</span></p>
+                                <div class="mt-1">
+                                    @if($w->status == 'pending') 
+                                        <span class="inline-flex items-center gap-1 text-[10px] bg-yellow-50 text-yellow-700 px-2 py-1 rounded-md font-bold border border-yellow-100">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse"></span> Đang xử lý
+                                        </span>
+                                    @elseif($w->status == 'approved') 
+                                        <span class="inline-flex items-center gap-1 text-[10px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md font-bold border border-emerald-100">
+                                            <i class="fa-solid fa-check"></i> Thành công
+                                        </span>
+                                    @elseif($w->status == 'rejected')
+                                        <span class="inline-flex items-center gap-1 text-[10px] bg-red-50 text-red-700 px-2 py-1 rounded-md font-bold border border-red-100">
+                                            <i class="fa-solid fa-xmark"></i> Bị từ chối
+                                        </span>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+
+                    {{-- DANH SÁCH TIỀN VÀO (BÁN HÀNG) --}}
+                    @foreach($incomeHistory as $order)
+                        <div class="flex items-center justify-between p-4 bg-emerald-50/30 rounded-2xl border border-emerald-100/50 transition-all hover:shadow-md hover:border-emerald-200 group">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-arrow-down-long text-lg"></i>
+                                </div>
+                                <div class="max-w-[150px] sm:max-w-[250px] lg:max-w-[300px]">
+                                    <p class="font-bold text-gray-800 text-sm md:text-base leading-tight truncate">Tiền hàng: {{ $order->product->title }}</p>
+                                    <p class="text-[11px] text-gray-500 mt-1 font-medium truncate"><i class="fa-solid fa-box-open mr-1 text-gray-400"></i> Người mua đã xác nhận</p>
+                                </div>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <p class="font-black text-emerald-600 text-base md:text-lg">+{{ number_format($order->seller_amount) }}<span class="text-xs ml-0.5">đ</span></p>
+                                <p class="text-[10px] text-gray-400 font-medium mt-1" title="Đã trừ {{ number_format($order->fee_amount) }}đ phí sàn">Phí sàn: -{{ number_format($order->fee_amount) }}đ</p>
+                            </div>
+                        </div>
+                    @endforeach
+
+                    {{-- TRẠNG THÁI TRỐNG --}}
+                    @if($withdrawals->isEmpty() && $incomeHistory->isEmpty())
+                        <div class="text-center py-16 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 h-full flex flex-col items-center justify-center">
+                            <div class="w-20 h-20 bg-white rounded-full shadow-sm flex items-center justify-center mb-4">
+                                <i class="fa-solid fa-receipt text-4xl text-gray-300"></i>
+                            </div>
+                            <h4 class="font-bold text-gray-700 mb-1">Chưa có giao dịch</h4>
+                            <p class="text-sm text-gray-500 font-medium max-w-xs">Ví của bạn hiện tại chưa có biến động số dư nào. Đăng bán sản phẩm để bắt đầu nhé!</p>
+                        </div>
+                    @endif
+
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 @endsection

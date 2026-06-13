@@ -29,6 +29,17 @@ class AdminWalletController extends Controller
         $withdrawal = Withdrawal::findOrFail($id);
         $withdrawal->update(['status' => 'approved']);
 
+        $user = \App\Models\User::find($withdrawal->user_id);
+        if ($user) {
+            $user->notify(new SystemNotification([
+                'type'    => 'success',                 // Màu xanh lá
+                'icon'    => 'fa-money-bill-transfer',  // Icon chuyển tiền
+                'title'   => 'Rút tiền thành công',
+                'message' => 'Lệnh rút <span class="font-bold text-red-600">' . number_format($withdrawal->amount) . 'đ</span> của bạn đã được xử lý. Vui lòng kiểm tra tài khoản ngân hàng.',
+                'url'     => route('wallet.index'),     // Dẫn về trang Ví
+            ]));
+        }
+
         return redirect()->back()->with('success', 'Đã phê duyệt lệnh rút tiền. Hãy nhớ chuyển khoản thực tế cho người dùng nhé!');
     }
 
@@ -36,11 +47,22 @@ class AdminWalletController extends Controller
     public function reject($id)
     {
         $withdrawal = Withdrawal::findOrFail($id);
-        
+
         // Trả lại tiền vào ví cho user
         $withdrawal->user->increment('balance', $withdrawal->amount);
-        
+
         $withdrawal->update(['status' => 'rejected']);
+
+        $user = \App\Models\User::find($withdrawal->user_id);
+        if ($user) {
+            $user->notify(new SystemNotification([
+                'type'    => 'danger',                  // Màu đỏ
+                'icon'    => 'fa-triangle-exclamation', // Icon tam giác cảnh báo
+                'title'   => 'Lệnh rút tiền thất bại',
+                'message' => 'Lệnh rút <span class="font-bold">' . number_format($withdrawal->amount) . 'đ</span> của bạn đã bị từ chối. Tiền đã được hoàn lại vào ví 2HAND.',
+                'url'     => route('wallet.index'),
+            ]));
+        }
 
         return redirect()->back()->with('error', ' đã từ chối lệnh rút tiền và hoàn tiền lại vào ví cho người dùng.');
     }

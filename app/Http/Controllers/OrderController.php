@@ -50,13 +50,25 @@ class OrderController extends Controller
                     'seller_amount' => $sellerAmount,
                     'payment_method' => $request->payment_method,
                     'status' => ($request->payment_method === 'cod') ? 'pending_shipping' : 'paid_escrow',
-                    'receiver_name' => $request->receiver_name, // <-- Đảm bảo có dòng này
+                    'receiver_name' => $request->receiver_name,
                     'phone_number' => $request->phone_number,
                     'shipping_address' => $request->shipping_address,
                 ]);
 
                 // Khóa món đồ
                 $product->update(['status' => 'sold']);
+
+                // [ĐÃ SỬA] BẮN THÔNG BÁO CHO NGƯỜI BÁN NGAY TRONG VÒNG LẶP ĐỂ ĐẢM BẢO TẤT CẢ NGƯỜI BÁN ĐỀU NHẬN ĐƯỢC
+                $seller = \App\Models\User::find($product->user_id);
+                if ($seller) {
+                    $seller->notify(new \App\Notifications\SystemNotification([
+                        'type'    => 'warning',
+                        'icon'    => 'fa-bag-shopping',
+                        'title'   => 'Đơn hàng mới',
+                        'message' => 'Bạn có đơn đặt mua mới từ khách hàng cho sản phẩm <span class="font-bold text-gray-900">"' . $product->title . '"</span>.',
+                        'url'     => route('orders.index'),
+                    ]));
+                }
             }
 
             // Dọn dẹp giỏ hàng
@@ -64,7 +76,6 @@ class OrderController extends Controller
 
             DB::commit();
             return redirect()->route('orders.index')->with('success', 'Chốt đơn thành công! Tiền đã được giữ an toàn trên hệ thống 2HAND.');
-
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->route('cart.index')->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
@@ -83,12 +94,26 @@ class OrderController extends Controller
     public function shipOrder($id)
     {
         $order = Order::where('id', $id)->where('seller_id', Auth::id())->firstOrFail();
-        
+
         // Cho phép gửi hàng nếu là COD (pending_shipping) HOẶC Đã chuyển khoản (paid_escrow)
         if ($order->status === 'paid_escrow' || $order->status === 'pending_shipping') {
             $order->update(['status' => 'shipped']);
+
+            // [ĐÃ SỬA] ĐƯA ĐOẠN CODE THÔNG BÁO VÀO TRONG KHỐI XỬ LÝ THÀNH CÔNG (TRƯỚC LỆNH RETURN)
+            $buyer = \App\Models\User::find($order->buyer_id);
+            if ($buyer) {
+                $buyer->notify(new \App\Notifications\SystemNotification([
+                    'type'    => 'info',            // Màu xanh dương
+                    'icon'    => 'fa-truck-fast',   // Icon xe tải
+                    'title'   => 'Đơn hàng đang được giao',
+                    'message' => 'Đơn hàng <span class="font-bold">#DH' . $order->id . '</span> (Sản phẩm: "' . $order->product->title . '") đã được vận chuyển.',
+                    'url'     => route('orders.index'),
+                ]));
+            }
+
             return redirect()->back()->with('success', 'Xác nhận gửi hàng thành công!');
         }
+
         return redirect()->back()->with('error', 'Thao tác không hợp lệ.');
     }
 
@@ -102,10 +127,21 @@ class OrderController extends Controller
             try {
                 // Đổi trạng thái đơn hàng thành hoàn tất
                 $order->update(['status' => 'completed']);
-                
+
                 // CỘNG TIỀN CHO NGƯỜI BÁN (97% giá trị đơn hàng)
                 $seller = \App\Models\User::find($order->seller_id);
-                $seller->increment('balance', $order->seller_amount);
+                if ($seller) {
+                    $seller->increment('balance', $order->seller_amount);
+
+                    // [ĐÃ SỬA] ĐƯA ĐOẠN THÔNG BÁO VÀO TRONG KHỐI TRANSACTION KHI ĐÃ CỘNG TIỀN THÀNH CÔNG
+                    $seller->notify(new \App\Notifications\SystemNotification([
+                        'type'    => 'success',          // Màu xanh lá
+                        'icon'    => 'fa-money-bill-wave', // Icon tiền tệ
+                        'title'   => 'Giao hàng thành công!',
+                        'message' => 'Người mua đã xác nhận nhận hàng cho đơn <span class="font-bold">#DH' . $order->id . '</span>. Tiền hàng đã được cộng vào ví 2HAND của bạn.',
+                        'url'     => route('wallet.index'),
+                    ]));
+                }
 
                 DB::commit();
                 return redirect()->back()->with('success', 'Tuyệt vời! Đơn hàng hoàn tất. Hệ thống đã giải ngân ' . number_format($order->seller_amount) . 'đ vào ví người bán.');
@@ -114,8 +150,7 @@ class OrderController extends Controller
                 return redirect()->back()->with('error', 'Lỗi hệ thống: ' . $e->getMessage());
             }
         }
+
         return redirect()->back()->with('error', 'Thao tác không hợp lệ.');
     }
-
-    
 }

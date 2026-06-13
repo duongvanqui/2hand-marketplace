@@ -1,372 +1,405 @@
-@extends('layouts.app')
+@extends('layouts.admin')
+
+@section('title', 'Chi tiết tin đăng - Admin')
+
+{{-- Tùy chỉnh Header: Gắn luôn nút Back vào cạnh Tiêu đề cho gọn gàng --}}
+@section('header_title')
+<div class="flex items-center gap-4">
+    <a href="{{ route('admin.products.index') }}" class="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-all shadow-sm">
+        <i class="fa-solid fa-arrow-left"></i>
+    </a>
+    <div class="flex flex-col">
+        <span class="text-2xl font-black text-gray-900 tracking-tight">Chi tiết tin đăng</span>
+        <p class="text-sm text-gray-500 font-medium mt-1">Mã tin: <span class="text-gray-800 font-bold">#SP{{ str_pad($product->id, 5, '0', STR_PAD_LEFT) }}</span></p>
+    </div>
+</div>
+@endsection
+
+{{-- Nút Hành động nhanh trên Header --}}
+@section('header_actions')
+<div class="flex items-center gap-3">
+    @if(in_array($product->status, ['pending', 'rejected']))
+    <form action="{{ route('admin.products.approve', $product->id) }}" method="POST">
+        @csrf @method('PATCH')
+        <button type="submit" onclick="return confirm('Bạn xác nhận nội dung tin này hợp lệ và cho phép hiển thị?')"
+            class="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl hover:from-emerald-600 hover:to-green-700 text-sm font-bold transition-all shadow-lg shadow-green-200 flex items-center gap-2 transform hover:-translate-y-0.5">
+            <i class="fa-solid fa-circle-check"></i> Duyệt tin ngay
+        </button>
+    </form>
+    @endif
+    @if(in_array($product->status, ['pending', 'approved']))
+    <button onclick="openModal('modal-reject')"
+        class="px-5 py-2.5 bg-white border border-red-200 text-red-600 rounded-xl hover:bg-red-50 text-sm font-bold transition-all shadow-sm flex items-center gap-2">
+        <i class="fa-solid fa-ban"></i> Từ chối
+    </button>
+    @endif
+</div>
+@endsection
 
 @section('content')
-<div class="flex min-h-screen bg-gray-100" x-data="{ sidebarOpen: true }">
+<div class="pb-10">
 
-    {{-- SIDEBAR --}}
-    <aside :class="sidebarOpen ? 'w-64' : 'w-20'"
-        class="bg-white shadow-xl min-h-screen transition-all duration-300 flex flex-col border-r border-gray-200 shrink-0">
-        <div class="p-4 border-b border-gray-100 flex items-center space-x-3 overflow-hidden">
-            <div class="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold shrink-0">
-                {{ substr(Auth::user()->name, 0, 1) }}
-            </div>
-            <div x-show="sidebarOpen" class="overflow-hidden">
-                <h2 class="text-sm font-bold text-gray-800 leading-tight truncate">{{ Auth::user()->name }}</h2>
-                <span class="text-xs text-orange-500 font-medium">Quản trị viên</span>
-            </div>
+    {{-- HIỂN THỊ THÔNG BÁO FLASH --}}
+    @if(session('success'))
+        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-2xl shadow-sm font-bold mb-6 flex items-center gap-3 animate-fade-in-down">
+            <div class="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-white shrink-0"><i class="fa-solid fa-check"></i></div>
+            {{ session('success') }}
         </div>
-        <nav class="flex-1 p-3 space-y-1">
-            <a href="{{ route('products.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-orange-500 rounded-xl font-medium transition-all group">
-                <i class="fa-solid fa-house text-lg w-6 shrink-0"></i>
-                <span x-show="sidebarOpen">Xem Trang Chủ</span>
-            </a>
-            <div class="border-t border-gray-100 my-2"></div>
-            <a href="{{ route('dashboard') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-orange-500 rounded-xl font-medium transition-all group">
-                <i class="fa-solid fa-chart-pie text-lg w-6 shrink-0"></i>
-                <span x-show="sidebarOpen">Tổng quan</span>
-            </a>
-            <a href="{{ route('profile.edit') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl transition-all group">
-                <i class="fa-solid fa-user-gear text-lg w-6 shrink-0"></i>
-                <span x-show="sidebarOpen">Cài đặt tài khoản</span>
-            </a>
-            @if(Auth::user()->role === 'admin')
-            <div class="pt-4 my-2 border-t border-gray-100">
-                <p x-show="sidebarOpen" class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Quản trị hệ thống</p>
-                <a href="{{ route('admin.users.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition">
-                    <i class="fa-solid fa-users text-lg w-6 shrink-0"></i>
-                    <span x-show="sidebarOpen">Quản lý Tài khoản</span>
-                </a>
-                <a href="{{ route('admin.categories.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition mt-1">
-                    <i class="fa-solid fa-list text-lg w-6 shrink-0"></i>
-                    <span x-show="sidebarOpen">Quản lý Danh mục</span>
-                </a>
-                <a href="{{ route('admin.products.index') }}" class="flex items-center space-x-3 px-4 py-3 bg-indigo-50 text-indigo-600 font-semibold rounded-xl transition mt-1">
-                    <i class="fa-solid fa-newspaper text-lg w-6 shrink-0"></i>
-                    <span x-show="sidebarOpen">Quản lý Sản phẩm</span>
-                </a>
+    @endif
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+
+        {{-- ========================================== --}}
+        {{-- CỘT TRÁI: Nội dung tin đăng (Chiếm 2/3) --}}
+        {{-- ========================================== --}}
+        <div class="xl:col-span-2 space-y-6">
+
+            {{-- Khối 1: Header Sản phẩm & Thông số --}}
+            <div class="bg-white rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-gray-100 p-6 md:p-8">
+                <div class="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
+                    <h2 class="text-2xl md:text-3xl font-black text-gray-900 leading-tight flex-1">{{ $product->title }}</h2>
+                    
+                    @php
+                        $statusStyles = [
+                            'pending'  => ['bg-yellow-50 text-yellow-600 border-yellow-200', 'Chờ duyệt', 'fa-clock'],
+                            'approved' => ['bg-emerald-50 text-emerald-600 border-emerald-200', 'Đang hiển thị', 'fa-circle-check'],
+                            'rejected' => ['bg-red-50 text-red-600 border-red-200', 'Bị từ chối', 'fa-circle-xmark'],
+                            'sold'     => ['bg-blue-50 text-blue-600 border-blue-200', 'Đã bán', 'fa-bag-shopping'],
+                            'hidden'   => ['bg-gray-100 text-gray-600 border-gray-200', 'Đã ẩn', 'fa-eye-slash'],
+                        ];
+                        $style = $statusStyles[$product->status] ?? ['bg-gray-100 text-gray-600 border-gray-200', $product->status, 'fa-circle-info'];
+                    @endphp
+                    <span class="px-4 py-2 rounded-xl text-sm font-bold border flex items-center gap-2 whitespace-nowrap h-fit {{ $style[0] }}">
+                        <i class="fa-solid {{ $style[2] }}"></i> {{ $style[1] }}
+                    </span>
+                </div>
+
+                <div class="flex items-end gap-3 mb-8 pb-8 border-b border-gray-50">
+                    <span class="text-4xl font-black text-red-500 tracking-tight">{{ number_format($product->price) }}<span class="text-2xl underline ml-1">đ</span></span>
+                    @if($product->original_price && $product->original_price > $product->price)
+                        <span class="text-lg text-gray-400 line-through mb-1">{{ number_format($product->original_price) }}đ</span>
+                        <span class="bg-red-50 text-red-600 text-[10px] font-bold px-2 py-1 rounded-lg mb-1.5 ml-2 border border-red-100">
+                            -{{ round((($product->original_price - $product->price) / $product->original_price) * 100) }}%
+                        </span>
+                    @endif
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div class="flex flex-col p-4 bg-gray-50/80 rounded-2xl border border-gray-100">
+                        <i class="fa-solid fa-layer-group text-blue-500 text-xl mb-2"></i>
+                        <p class="text-xs text-gray-400 font-bold uppercase mb-0.5">Danh mục</p>
+                        <p class="font-bold text-gray-900 truncate" title="{{ $product->category->name ?? 'N/A' }}">{{ $product->category->name ?? 'N/A' }}</p>
+                    </div>
+                    <div class="flex flex-col p-4 bg-gray-50/80 rounded-2xl border border-gray-100">
+                        <i class="fa-solid fa-location-dot text-red-500 text-xl mb-2"></i>
+                        <p class="text-xs text-gray-400 font-bold uppercase mb-0.5">Khu vực</p>
+                        <p class="font-bold text-gray-900 truncate" title="{{ $product->location ?? 'Chưa cập nhật' }}">{{ $product->location ?? 'Chưa cập nhật' }}</p>
+                    </div>
+                    <div class="flex flex-col p-4 bg-gray-50/80 rounded-2xl border border-gray-100">
+                        <i class="fa-solid fa-sparkles text-orange-500 text-xl mb-2"></i>
+                        <p class="text-xs text-gray-400 font-bold uppercase mb-0.5">Tình trạng</p>
+                        <p class="font-bold text-gray-900">Mới {{ $product->condition_pct }}%</p>
+                    </div>
+                    <div class="flex flex-col p-4 bg-gray-50/80 rounded-2xl border border-gray-100">
+                        <i class="fa-solid fa-eye text-emerald-500 text-xl mb-2"></i>
+                        <p class="text-xs text-gray-400 font-bold uppercase mb-0.5">Lượt xem</p>
+                        <p class="font-bold text-gray-900">{{ number_format($product->view_count) }} lượt</p>
+                    </div>
+                </div>
             </div>
-            @endif
-        </nav>
-    </aside>
 
-    {{-- MAIN --}}
-    <main class="flex-1 p-8 overflow-y-auto">
-
-        {{-- Header --}}
-        <div class="flex items-center justify-between mb-8">
-            <div class="flex items-center space-x-3">
-                <button @click="sidebarOpen = !sidebarOpen" class="p-2 bg-white rounded-lg shadow border border-gray-200 text-gray-600 hover:bg-gray-50">
-                    <i class="fa-solid fa-bars"></i>
-                </button>
-                <a href="{{ route('admin.products.index') }}" class="p-2 bg-white rounded-lg shadow border border-gray-200 text-gray-600 hover:bg-gray-50">
-                    <i class="fa-solid fa-arrow-left"></i>
-                </a>
-                <h1 class="text-2xl font-bold text-gray-800">Chi tiết tin đăng</h1>
-            </div>
-
-            {{-- Hành động nhanh --}}
-            <div class="flex items-center gap-2">
-                @if(in_array($product->status, ['pending', 'rejected']))
-                <form action="{{ route('admin.products.approve', $product->id) }}" method="POST">
-                    @csrf @method('PATCH')
-                    <button type="submit" onclick="return confirm('Duyệt tin này?')"
-                        class="px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 text-sm font-medium transition">
-                        <i class="fa-solid fa-circle-check mr-1"></i> Duyệt tin
-                    </button>
-                </form>
-                @endif
-                @if(in_array($product->status, ['pending', 'approved']))
-                <button onclick="openModal('modal-reject')"
-                    class="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 text-sm font-medium transition">
-                    <i class="fa-solid fa-circle-xmark mr-1"></i> Từ chối
-                </button>
-                @endif
-            </div>
-        </div>
-
-        {{-- Flash --}}
-        @if(session('success'))
-        <div class="mb-6 p-4 bg-green-50 text-green-700 rounded-xl border border-green-100 font-medium">
-            <i class="fa-solid fa-circle-check mr-2"></i>{{ session('success') }}
-        </div>
-        @endif
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-            {{-- Nội dung tin (2/3) --}}
-            <div class="lg:col-span-2 space-y-6">
-
-                {{-- Ảnh --}}
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-                    <h3 class="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wider">Hình ảnh sản phẩm</h3>
-                    @if($product->images && $product->images->count() > 0)
-                    <div class="grid grid-cols-4 gap-2">
-                        @foreach($product->images as $img)
-                        <div class="aspect-square rounded-xl overflow-hidden border border-gray-100">
-                            <img src="{{ asset('storage/' . $img->image_path) }}" class="w-full h-full object-cover">
-                        </div>
+            {{-- Khối 2: Hình ảnh sản phẩm --}}
+            <div class="bg-white rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-gray-100 p-6 md:p-8">
+                <h3 class="text-base font-black text-gray-900 mb-5 flex items-center gap-2">
+                    <i class="fa-regular fa-images text-blue-500"></i> Thư viện hình ảnh
+                </h3>
+                
+                @if($product->images && $product->images->count() > 0)
+                    {{-- Grid hiển thị ảnh đẹp mắt: Ảnh đầu tiên to, các ảnh sau nhỏ --}}
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        @foreach($product->images as $index => $img)
+                            <div class="{{ $index === 0 ? 'col-span-2 md:col-span-4 aspect-[21/9] md:aspect-[3/1]' : 'aspect-square' }} rounded-2xl overflow-hidden border border-gray-200 shadow-sm relative group cursor-pointer">
+                                <img src="{{ asset('storage/' . $img->image_path) }}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                                @if($index === 0)
+                                    <div class="absolute top-3 left-3 bg-black/50 backdrop-blur text-white text-[10px] font-bold px-3 py-1.5 rounded-lg border border-white/20">
+                                        Ảnh bìa
+                                    </div>
+                                @endif
+                            </div>
                         @endforeach
                     </div>
-                    @else
-                    <div class="py-8 text-center text-gray-400 bg-gray-50 rounded-xl">
-                        <i class="fa-solid fa-image text-3xl mb-2 block"></i>
-                        Chưa có ảnh sản phẩm
-                    </div>
-                    @endif
-                </div>
-
-                {{-- Thông tin --}}
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                    <div class="flex items-start justify-between mb-4">
-                        <h2 class="text-xl font-bold text-gray-900 flex-1 mr-4">{{ $product->title }}</h2>
-                        @php
-                            $colors = ['pending'=>'bg-yellow-50 text-yellow-600','approved'=>'bg-green-50 text-green-600','rejected'=>'bg-red-50 text-red-600','sold'=>'bg-blue-50 text-blue-600','hidden'=>'bg-gray-100 text-gray-500'];
-                            $labels = ['pending'=>'Chờ duyệt','approved'=>'Đã duyệt','rejected'=>'Từ chối','sold'=>'Đã bán','hidden'=>'Đã ẩn'];
-                        @endphp
-                        <span class="px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ $colors[$product->status] ?? 'bg-gray-100 text-gray-600' }}">
-                            {{ $labels[$product->status] ?? $product->status }}
-                        </span>
-                    </div>
-
-                    <div class="flex items-center gap-3 mb-6">
-                        <span class="text-2xl font-bold text-orange-500">{{ number_format($product->price) }}đ</span>
-                        @if($product->original_price)
-                        <span class="text-base text-gray-400 line-through">{{ number_format($product->original_price) }}đ</span>
-                        @endif
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3 mb-6 text-sm">
-                        <div class="flex items-center gap-2 text-gray-600 bg-gray-50 rounded-xl p-3">
-                            <i class="fa-solid fa-tag w-4 text-gray-400"></i>
-                            <div>
-                                <p class="text-xs text-gray-400">Danh mục</p>
-                                <p class="font-medium">{{ $product->category->name ?? 'N/A' }}</p>
-                            </div>
+                @else
+                    <div class="py-12 flex flex-col items-center justify-center text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                        <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
+                            <i class="fa-solid fa-image-slash text-2xl"></i>
                         </div>
-                        <div class="flex items-center gap-2 text-gray-600 bg-gray-50 rounded-xl p-3">
-                            <i class="fa-solid fa-location-dot w-4 text-gray-400"></i>
-                            <div>
-                                <p class="text-xs text-gray-400">Khu vực</p>
-                                <p class="font-medium">{{ $product->location ?? 'Chưa cập nhật' }}</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2 text-gray-600 bg-gray-50 rounded-xl p-3">
-                            <i class="fa-solid fa-star w-4 text-gray-400"></i>
-                            <div>
-                                <p class="text-xs text-gray-400">Tình trạng</p>
-                                <p class="font-medium">{{ $product->condition_pct }}% mới</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2 text-gray-600 bg-gray-50 rounded-xl p-3">
-                            <i class="fa-solid fa-eye w-4 text-gray-400"></i>
-                            <div>
-                                <p class="text-xs text-gray-400">Lượt xem</p>
-                                <p class="font-medium">{{ number_format($product->view_count) }}</p>
-                            </div>
-                        </div>
+                        <p class="font-medium text-sm">Tin đăng này không có hình ảnh minh họa</p>
                     </div>
-
-                    @if($product->description)
-                    <div class="border-t border-gray-100 pt-4">
-                        <h3 class="text-sm font-semibold text-gray-700 mb-2">Mô tả sản phẩm</h3>
-                        <p class="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{{ $product->description }}</p>
-                    </div>
-                    @endif
-                </div>
+                @endif
             </div>
 
-            {{-- Panel phải (1/3) --}}
-            <div class="space-y-4">
-
-                {{-- Người đăng --}}
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-                    <h3 class="text-sm font-bold text-gray-700 mb-4 uppercase tracking-wider">Người đăng tin</h3>
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold shrink-0">
-                            {{ substr($product->user->name ?? 'U', 0, 1) }}
-                        </div>
-                        <div>
-                            <p class="font-semibold text-gray-800 text-sm">{{ $product->user->name ?? 'N/A' }}</p>
-                            <p class="text-xs text-gray-500">{{ $product->user->email ?? '' }}</p>
-                        </div>
-                    </div>
-                    <div class="text-xs text-gray-500 space-y-1.5">
-                        <div class="flex justify-between">
-                            <span>Ngày đăng:</span>
-                            <span class="font-medium text-gray-700">{{ $product->created_at->format('d/m/Y H:i') }}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span>Cập nhật:</span>
-                            <span class="font-medium text-gray-700">{{ $product->updated_at->format('d/m/Y H:i') }}</span>
-                        </div>
-                        @if($product->resubmit_count > 0)
-                        <div class="flex justify-between">
-                            <span>Gửi lại:</span>
-                            <span class="font-medium text-orange-600">{{ $product->resubmit_count }} lần</span>
-                        </div>
-                        @endif
-                    </div>
+            {{-- Khối 3: Mô tả chi tiết --}}
+            @if($product->description)
+            <div class="bg-white rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-gray-100 p-6 md:p-8">
+                <h3 class="text-base font-black text-gray-900 mb-5 flex items-center gap-2">
+                    <i class="fa-solid fa-align-left text-blue-500"></i> Mô tả chi tiết
+                </h3>
+                <div class="p-5 bg-yellow-50/30 rounded-2xl border border-yellow-100/50">
+                    <p class="text-sm text-gray-700 leading-loose whitespace-pre-line">{{ $product->description }}</p>
                 </div>
+            </div>
+            @endif
 
-                {{-- Lịch sử duyệt --}}
-                @if($product->reviewed_at)
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-                    <h3 class="text-sm font-bold text-gray-700 mb-4 uppercase tracking-wider">Lịch sử duyệt</h3>
-                    <div class="text-xs text-gray-500 space-y-2">
-                        <div class="flex justify-between">
-                            <span>Admin xử lý:</span>
-                            <span class="font-medium text-gray-700">{{ $product->reviewer->name ?? 'N/A' }}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span>Thời điểm:</span>
-                            <span class="font-medium text-gray-700">{{ $product->reviewed_at->format('d/m/Y H:i') }}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span>Kết quả:</span>
-                            <span class="font-medium {{ $product->status === 'approved' ? 'text-green-600' : 'text-red-600' }}">
-                                {{ $labels[$product->status] ?? $product->status }}
-                            </span>
-                        </div>
-                    </div>
-                    @if($product->rejection_reason)
-                    <div class="mt-3 p-3 bg-red-50 rounded-xl">
-                        <p class="text-xs font-semibold text-red-700 mb-1">Lý do từ chối:</p>
-                        <p class="text-xs text-red-600">{{ $product->rejection_reason }}</p>
-                    </div>
-                    @endif
+            {{-- Khối 4: Thông số kỹ thuật --}}
+            @if($product->specifications)
+            <div class="bg-white rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-gray-100 p-6 md:p-8">
+                <h3 class="text-base font-black text-gray-900 mb-5 flex items-center gap-2">
+                    <i class="fa-solid fa-microchip text-emerald-500"></i> Thông số kỹ thuật
+                </h3>
+                <div class="p-5 bg-emerald-50/30 rounded-2xl border border-emerald-100/50">
+                    <p class="text-sm text-gray-700 leading-loose whitespace-pre-line">{{ $product->specifications }}</p>
                 </div>
-                @endif
+            </div>
+            @endif
 
-                {{-- Hành động --}}
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-2">
-                    <h3 class="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wider">Hành động</h3>
+        </div>
 
+        {{-- ========================================== --}}
+        {{-- CỘT PHẢI: Bảng điều khiển hệ thống (Chiếm 1/3) --}}
+        {{-- ========================================== --}}
+        <div class="space-y-6">
+
+            {{-- 1. BẢNG ĐIỀU KHIỂN HÀNH ĐỘNG (Trạm kiểm soát) --}}
+            <div class="bg-white rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-gray-100 p-6">
+                <h3 class="text-xs font-bold text-gray-400 mb-4 uppercase tracking-widest text-center">Bảng điều khiển</h3>
+                
+                <div class="space-y-3">
+                    {{-- Nút Duyệt --}}
                     @if(in_array($product->status, ['pending', 'rejected']))
                     <form action="{{ route('admin.products.approve', $product->id) }}" method="POST">
                         @csrf @method('PATCH')
-                        <button type="submit" onclick="return confirm('Duyệt tin này?')"
-                            class="w-full py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 text-sm font-medium transition">
-                            <i class="fa-solid fa-circle-check mr-2"></i>Duyệt tin
+                        <button type="submit" onclick="return confirm('Duyệt hiển thị tin này?')"
+                            class="w-full py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl hover:from-emerald-600 hover:to-green-700 text-sm font-bold transition-all shadow-md shadow-green-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-check-double"></i> Duyệt hiển thị tin
                         </button>
                     </form>
                     @endif
 
-                    @if(in_array($product->status, ['pending', 'approved']))
-                    <button onclick="openModal('modal-reject')"
-                        class="w-full py-2.5 bg-red-50 text-red-600 border border-red-200 rounded-xl hover:bg-red-100 text-sm font-medium transition">
-                        <i class="fa-solid fa-circle-xmark mr-2"></i>Từ chối tin
-                    </button>
-                    @endif
-
-                    @if(in_array($product->status, ['approved', 'hidden']))
-                    <form action="{{ route('admin.products.toggle-status', $product->id) }}" method="POST">
-                        @csrf @method('PATCH')
-                        <button type="submit"
-                            class="w-full py-2.5 bg-yellow-50 text-yellow-600 border border-yellow-200 rounded-xl hover:bg-yellow-100 text-sm font-medium transition">
-                            <i class="fa-solid {{ $product->status === 'approved' ? 'fa-eye-slash' : 'fa-eye' }} mr-2"></i>
-                            {{ $product->status === 'approved' ? 'Ẩn tin' : 'Hiện tin' }}
-                        </button>
-                    </form>
-                    @endif
-
+                    {{-- Nút Đẩy tin --}}
+                    @if($product->status === 'approved')
                     <button onclick="openModal('modal-push')"
-                        class="w-full py-2.5 bg-purple-50 text-purple-600 border border-purple-200 rounded-xl hover:bg-purple-100 text-sm font-medium transition">
-                        <i class="fa-solid fa-arrow-up mr-2"></i>Đẩy tin lên đầu
+                        class="w-full py-3 bg-purple-50 text-purple-700 border border-purple-200 rounded-xl hover:bg-purple-100 text-sm font-bold transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-arrow-up-right-dots"></i> Đẩy tin lên đầu (Top)
                     </button>
+                    @endif
 
+                    {{-- Nhóm Nút Phụ --}}
+                    <div class="grid grid-cols-2 gap-3 pt-2">
+                        {{-- Từ chối --}}
+                        @if(in_array($product->status, ['pending', 'approved']))
+                        <button onclick="openModal('modal-reject')"
+                            class="w-full py-2.5 bg-red-50 text-red-600 border border-red-100 rounded-xl hover:bg-red-100 hover:border-red-200 text-sm font-bold transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-ban"></i> Từ chối
+                        </button>
+                        @endif
+
+                        {{-- Ẩn/Hiện --}}
+                        @if(in_array($product->status, ['approved', 'hidden']))
+                        <form action="{{ route('admin.products.toggle-status', $product->id) }}" method="POST" class="w-full">
+                            @csrf @method('PATCH')
+                            <button type="submit"
+                                class="w-full py-2.5 bg-gray-50 text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-100 text-sm font-bold transition-all flex items-center justify-center gap-2">
+                                <i class="fa-solid {{ $product->status === 'approved' ? 'fa-eye-slash text-yellow-500' : 'fa-eye text-blue-500' }}"></i>
+                                {{ $product->status === 'approved' ? 'Ẩn tin' : 'Hiện tin' }}
+                            </button>
+                        </form>
+                        @endif
+                    </div>
+
+                    {{-- Xóa tin --}}
                     <form action="{{ route('admin.products.destroy', $product->id) }}" method="POST"
-                        onsubmit="return confirm('Xóa tin này? Hành động không thể hoàn tác.')">
+                        onsubmit="return confirm('CẢNH BÁO MỨC ĐỎ: Hành động này sẽ xóa vĩnh viễn tin đăng và toàn bộ ảnh khỏi hệ thống. Bạn chắc chắn chứ?')" class="pt-4 border-t border-gray-50 mt-4">
                         @csrf @method('DELETE')
                         <button type="submit"
-                            class="w-full py-2.5 bg-gray-50 text-gray-500 border border-gray-200 rounded-xl hover:bg-red-50 hover:text-red-500 hover:border-red-200 text-sm font-medium transition">
-                            <i class="fa-solid fa-trash-can mr-2"></i>Xóa tin
+                            class="w-full py-2.5 bg-white text-red-500 border border-red-100 rounded-xl hover:bg-red-50 text-sm font-bold transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-trash-can"></i> Xóa vĩnh viễn
                         </button>
                     </form>
                 </div>
             </div>
+
+            {{-- 2. THÔNG TIN NGƯỜI ĐĂNG --}}
+            <div class="bg-white rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-gray-100 p-6">
+                <h3 class="text-xs font-bold text-gray-400 mb-5 uppercase tracking-widest text-center">Người đăng tin</h3>
+                
+                <div class="flex flex-col items-center mb-6">
+                    <div class="w-16 h-16 rounded-full border-4 border-gray-50 shadow-sm overflow-hidden bg-blue-50 flex items-center justify-center text-blue-600 font-black text-xl mb-3">
+                        @if($product->user && $product->user->avatar)
+                            <img src="{{ asset('storage/' . $product->user->avatar) }}" class="w-full h-full object-cover">
+                        @else
+                            {{ substr($product->user->name ?? 'U', 0, 1) }}
+                        @endif
+                    </div>
+                    <p class="font-bold text-gray-900 text-lg">{{ $product->user->name ?? 'Tài khoản không tồn tại' }}</p>
+                    <p class="text-xs text-gray-500 bg-gray-50 px-3 py-1 rounded-full mt-2 border border-gray-100">{{ $product->user->email ?? 'N/A' }}</p>
+                </div>
+                
+                <div class="space-y-3 text-sm text-gray-600 p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-400 font-medium">Tạo lúc:</span>
+                        <span class="font-bold text-gray-800">{{ $product->created_at->format('d/m/Y H:i') }}</span>
+                    </div>
+                    <div class="flex justify-between items-center border-t border-gray-100/60 pt-3">
+                        <span class="text-gray-400 font-medium">Cập nhật:</span>
+                        <span class="font-bold text-gray-800">{{ $product->updated_at->format('d/m/Y H:i') }}</span>
+                    </div>
+                    @if(isset($product->resubmit_count) && $product->resubmit_count > 0)
+                    <div class="flex justify-between items-center border-t border-gray-100/60 pt-3">
+                        <span class="text-gray-400 font-medium">Lượt gửi lại:</span>
+                        <span class="font-black text-orange-500 bg-orange-50 px-2 py-0.5 rounded">{{ $product->resubmit_count }} lần</span>
+                    </div>
+                    @endif
+                </div>
+            </div>
+
+            {{-- 3. LỊCH SỬ KIỂM DUYỆT --}}
+            @if($product->reviewed_at)
+            <div class="bg-white rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-gray-100 p-6">
+                <h3 class="text-xs font-bold text-gray-400 mb-5 uppercase tracking-widest text-center">Lịch sử kiểm duyệt</h3>
+                
+                <div class="relative border-l-2 border-gray-100 ml-3 space-y-6">
+                    <div class="relative pl-5">
+                        <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-white {{ $product->status === 'approved' ? 'bg-green-500' : 'bg-red-500' }}"></div>
+                        <p class="text-sm font-bold text-gray-900 mb-0.5">Đã xử lý tin</p>
+                        <p class="text-xs text-gray-500 mb-2">{{ $product->reviewed_at->format('H:i - d/m/Y') }}</p>
+                        
+                        <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 text-xs text-gray-600 space-y-1.5">
+                            <p><span class="text-gray-400">Người duyệt:</span> <span class="font-bold text-gray-800">{{ $product->reviewer->name ?? 'Admin hệ thống' }}</span></p>
+                            <p><span class="text-gray-400">Kết quả:</span> <span class="font-bold {{ $product->status === 'approved' ? 'text-green-600' : 'text-red-600' }}">{{ $labels[$product->status] ?? $product->status }}</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                @if($product->rejection_reason)
+                <div class="mt-4 p-4 bg-red-50 rounded-2xl border border-red-100 relative overflow-hidden">
+                    <div class="absolute right-[-10px] bottom-[-10px] text-red-500/10 text-6xl">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <p class="text-[11px] font-black text-red-600 mb-1 uppercase tracking-wide">Lý do từ chối:</p>
+                    <p class="text-sm text-red-800 font-medium leading-relaxed relative z-10">{{ $product->rejection_reason }}</p>
+                </div>
+                @endif
+            </div>
+            @endif
+
         </div>
-    </main>
+    </div>
 </div>
 
-{{-- Modal: Từ chối --}}
-<div id="modal-reject" class="fixed inset-0 z-50 hidden bg-black/50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-        <h3 class="text-lg font-bold text-gray-800 mb-5">Từ chối tin đăng</h3>
-        <form action="{{ route('admin.products.reject', $product->id) }}" method="POST">
+{{-- ========================================== --}}
+{{-- MODALS TƯƠNG TÁC (CHUẨN GIAO DIỆN MỚI) --}}
+{{-- ========================================== --}}
+
+{{-- 1. Modal: Từ chối tin --}}
+<div id="modal-reject" class="fixed inset-0 z-50 hidden bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col transform transition-all">
+        <div class="p-6 border-b border-gray-100 bg-red-50/30 flex justify-between items-center">
+            <h3 class="text-xl font-black text-gray-800 flex items-center gap-2"><i class="fa-solid fa-ban text-red-500"></i> Từ chối tin đăng</h3>
+            <button onclick="closeModal('modal-reject')" class="text-gray-400 hover:text-gray-700 transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+        <form action="{{ route('admin.products.reject', $product->id) }}" method="POST" class="p-6 space-y-4">
             @csrf @method('PATCH')
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Lý do từ chối</label>
-                <select class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm mb-2 focus:outline-none focus:border-red-400"
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Chọn mẫu lý do</label>
+                <select class="w-full px-4 py-3 border border-gray-200 bg-gray-50/50 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-red-400 transition-all cursor-pointer appearance-none"
                     onchange="if(this.value) document.getElementById('rejection_reason').value = this.value">
-                    <option value="">-- Chọn lý do có sẵn --</option>
+                    <option value="">-- Chọn lỗi vi phạm thường gặp --</option>
                     <option value="Ảnh sản phẩm không rõ nét hoặc thiếu ảnh.">Ảnh không rõ nét / thiếu ảnh</option>
                     <option value="Mô tả sản phẩm không đầy đủ hoặc không chính xác.">Mô tả không đầy đủ</option>
                     <option value="Giá bán không hợp lý so với thực tế.">Giá không hợp lý</option>
                     <option value="Nội dung vi phạm quy định của sàn.">Vi phạm quy định</option>
                     <option value="Danh mục không phù hợp với sản phẩm.">Sai danh mục</option>
                 </select>
-                <textarea id="rejection_reason" name="rejection_reason" rows="3" required
-                    placeholder="Nhập lý do chi tiết..."
-                    class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-50 resize-none">{{ $product->rejection_reason }}</textarea>
             </div>
-            <div class="flex justify-end gap-3">
-                <button type="button" onclick="closeModal('modal-reject')"
-                    class="px-4 py-2 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 text-sm">Hủy</button>
-                <button type="submit"
-                    class="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 text-sm">Từ chối</button>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Lý do chi tiết <span class="text-red-500">*</span></label>
+                <textarea id="rejection_reason" name="rejection_reason" rows="4" required
+                    placeholder="Nhập lý do chính xác để người bán biết đường sửa..."
+                    class="w-full px-4 py-3 border border-gray-200 bg-gray-50/50 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-red-400 focus:ring-4 focus:ring-red-50 transition-all resize-none">{{ $product->rejection_reason ?? '' }}</textarea>
+            </div>
+            <div class="flex justify-end gap-3 pt-4 border-t border-gray-50 mt-4">
+                <button type="button" onclick="closeModal('modal-reject')" class="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-sm transition">Hủy bỏ</button>
+                <button type="submit" class="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-sm transition shadow-md shadow-red-200">Xác nhận Từ chối</button>
             </div>
         </form>
     </div>
 </div>
 
-{{-- Modal: Đẩy tin --}}
-<div id="modal-push" class="fixed inset-0 z-50 hidden bg-black/50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6">
-        <h3 class="text-lg font-bold text-gray-800 mb-5">Đẩy tin lên đầu</h3>
-        <form action="{{ route('admin.products.push', $product->id) }}" method="POST">
+{{-- 2. Modal: Đẩy tin --}}
+<div id="modal-push" class="fixed inset-0 z-50 hidden bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden flex flex-col transform transition-all">
+        <div class="p-6 border-b border-gray-100 bg-purple-50/30 flex justify-between items-center">
+            <h3 class="text-xl font-black text-gray-800 flex items-center gap-2"><i class="fa-solid fa-arrow-up text-purple-600"></i> Cấu hình Đẩy tin</h3>
+            <button onclick="closeModal('modal-push')" class="text-gray-400 hover:text-gray-700 transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+        <form action="{{ route('admin.products.push', $product->id) }}" method="POST" class="p-6 space-y-4">
             @csrf @method('PATCH')
             <input type="hidden" name="days" id="push-days" value="3">
-            <div class="mb-5">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Thời gian đẩy tin</label>
-                <div class="grid grid-cols-3 gap-2">
+            
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-3 text-center">Thời gian hiển thị TOP</label>
+                <div class="grid grid-cols-3 gap-3">
                     @foreach([1 => '1 ngày', 3 => '3 ngày', 7 => '7 ngày'] as $d => $label)
                     <button type="button" onclick="selectDays({{ $d }}, this)"
-                        class="push-day-btn py-2.5 border-2 rounded-xl text-sm font-medium transition {{ $d === 3 ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-600 hover:border-purple-300' }}">
+                        class="push-day-btn py-3 border-2 rounded-xl text-sm font-bold transition-all {{ $d === 3 ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-sm' : 'border-gray-100 text-gray-500 hover:border-purple-200 hover:bg-purple-50' }}">
                         {{ $label }}
                     </button>
                     @endforeach
                 </div>
-                @if($product->pushed_until && $product->pushed_until > now())
-                <p class="text-xs text-purple-600 mt-2">
-                    <i class="fa-solid fa-circle-info mr-1"></i>
-                    Đang đẩy đến: {{ $product->pushed_until->format('d/m/Y H:i') }}
-                </p>
-                @endif
             </div>
-            <div class="flex justify-end gap-3">
-                <button type="button" onclick="closeModal('modal-push')"
-                    class="px-4 py-2 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 text-sm">Hủy</button>
-                <button type="submit"
-                    class="px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 text-sm">
-                    <i class="fa-solid fa-arrow-up mr-1"></i> Đẩy tin
+
+            @if($product->pushed_until && $product->pushed_until > now())
+            <div class="bg-purple-50 border border-purple-100 p-3 rounded-xl flex items-start gap-2 mt-4">
+                <i class="fa-solid fa-circle-info text-purple-500 mt-0.5"></i>
+                <div>
+                    <p class="text-xs font-bold text-purple-700">Tin đang được đẩy!</p>
+                    <p class="text-[11px] text-purple-600 mt-0.5">Sẽ hết hạn vào lúc: {{ $product->pushed_until->format('d/m/Y H:i') }}</p>
+                </div>
+            </div>
+            @endif
+
+            <div class="flex justify-end gap-3 pt-4 border-t border-gray-50 mt-4">
+                <button type="button" onclick="closeModal('modal-push')" class="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-sm transition">Hủy</button>
+                <button type="submit" class="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-sm transition shadow-md shadow-purple-200 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rocket"></i> Bắt đầu Đẩy
                 </button>
             </div>
         </form>
     </div>
 </div>
+@endsection
 
+@section('scripts')
 <script>
-function openModal(id)  { document.getElementById(id).classList.remove('hidden'); }
-function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+    // Bật/tắt Modal mượt mà với khóa cuộn nền
+    function openModal(id) { 
+        document.getElementById(id).classList.remove('hidden'); 
+        document.body.style.overflow = 'hidden';
+    }
+    function closeModal(id) { 
+        document.getElementById(id).classList.add('hidden'); 
+        document.body.style.overflow = 'auto';
+    }
 
-function selectDays(days, btn) {
-    document.getElementById('push-days').value = days;
-    document.querySelectorAll('.push-day-btn').forEach(b => {
-        b.classList.remove('border-purple-500', 'bg-purple-50', 'text-purple-700');
-        b.classList.add('border-gray-200', 'text-gray-600');
-    });
-    btn.classList.remove('border-gray-200', 'text-gray-600');
-    btn.classList.add('border-purple-500', 'bg-purple-50', 'text-purple-700');
-}
+    // Logic chọn ngày đẩy tin
+    function selectDays(days, btn) {
+        document.getElementById('push-days').value = days;
+        document.querySelectorAll('.push-day-btn').forEach(b => {
+            b.classList.remove('border-purple-500', 'bg-purple-50', 'text-purple-700', 'shadow-sm');
+            b.classList.add('border-gray-100', 'text-gray-500');
+        });
+        btn.classList.remove('border-gray-100', 'text-gray-500');
+        btn.classList.add('border-purple-500', 'bg-purple-50', 'text-purple-700', 'shadow-sm');
+    }
 </script>
 @endsection

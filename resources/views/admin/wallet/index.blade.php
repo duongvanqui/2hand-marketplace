@@ -1,170 +1,167 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 
-@section('title', 'Quản trị tài chính sàn 2HAND')
+@section('title', 'Quản trị tài chính - Admin')
+
+{{-- Đẩy tiêu đề lên thanh Header dùng chung --}}
+@section('header_title')
+<div class="flex flex-col">
+    <span class="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+        Quản trị Tài chính & Doanh thu
+    </span>
+    <p class="text-sm text-gray-500 font-medium mt-1">Kiểm soát dòng tiền phí sàn và các yêu cầu rút tiền từ người dùng</p>
+</div>
+@endsection
 
 @section('content')
-<div class="flex min-h-screen bg-gray-100" x-data="{ sidebarOpen: true }">
-    
-    {{-- SIDEBAR BÊN TRÁI (HIỆU ỨNG THU PHÓNG) --}}
-    <aside :class="sidebarOpen ? 'w-64' : 'w-20'" class="bg-white shadow-xl min-h-screen transition-all duration-300 flex flex-col border-r border-gray-200 shrink-0">
-        <div class="p-4 border-b border-gray-100 flex items-center space-x-3 overflow-hidden">
-            <div class="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold shrink-0 uppercase">
-                {{ substr(Auth::user()->name, 0, 1) }}
+<div class="pb-10">
+
+    {{-- ========================================== --}}
+    {{-- KHỐI HIỂN THỊ THÔNG BÁO FLASH --}}
+    {{-- ========================================== --}}
+    @if(session('success'))
+        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-2xl shadow-sm font-bold mb-6 flex items-center gap-3 animate-fade-in-down">
+            <div class="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-white shrink-0"><i class="fa-solid fa-check"></i></div>
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="bg-red-50 border border-red-200 text-red-800 p-4 rounded-2xl shadow-sm font-bold mb-6 flex items-center gap-3 animate-fade-in-down">
+            <div class="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white shrink-0"><i class="fa-solid fa-xmark"></i></div>
+            {{ session('error') }}
+        </div>
+    @endif
+
+    {{-- ========================================== --}}
+    {{-- 1. THỐNG KÊ TÀI CHÍNH (2 CARDS LỚN) --}}
+    {{-- ========================================== --}}
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+        
+        {{-- Card: Tổng Doanh Thu --}}
+        <div class="bg-white p-6 md:p-8 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-gray-100 hover:shadow-lg transition-all group flex items-center justify-between relative overflow-hidden z-10">
+            <div class="absolute right-0 top-0 w-40 h-40 bg-emerald-50 rounded-full blur-3xl -z-10 group-hover:bg-emerald-100 transition-colors"></div>
+            <div>
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                    Tổng phí sàn thu được (3%)
+                </p>
+                <h3 class="text-4xl font-black text-gray-900">{{ number_format($totalRevenue) }}<span class="text-2xl text-gray-400 font-bold ml-1">đ</span></h3>
+                <p class="text-[11px] font-bold text-emerald-600 mt-3 bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-100 inline-flex items-center gap-1.5">
+                    <i class="fa-solid fa-vault"></i> Tiền đã cộng vào tài khoản hệ thống
+                </p>
             </div>
-            <div x-show="sidebarOpen" class="transition-opacity duration-300 overflow-hidden">
-                <h2 class="text-sm font-bold text-gray-800 leading-tight truncate">{{ Auth::user()->name }}</h2>
-                <span class="text-xs text-green-500 font-medium">
-                    {{ Auth::user()->role === 'admin' ? 'Quản trị viên' : 'Thành viên' }}
-                </span>
+            <div class="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-tr from-emerald-500 to-green-400 text-white flex items-center justify-center text-3xl md:text-4xl shadow-lg shadow-emerald-200 group-hover:scale-110 group-hover:-rotate-6 transition-transform shrink-0">
+                <i class="fa-solid fa-sack-dollar"></i>
+            </div>
+        </div>
+        
+        {{-- Card: Lệnh rút tiền --}}
+        <div class="bg-white p-6 md:p-8 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-gray-100 hover:shadow-lg transition-all group flex items-center justify-between relative overflow-hidden z-10">
+            <div class="absolute right-0 top-0 w-40 h-40 bg-blue-50 rounded-full blur-3xl -z-10 group-hover:bg-blue-100 transition-colors"></div>
+            <div>
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                    Lệnh rút tiền chờ duyệt
+                </p>
+                <h3 class="text-4xl font-black text-gray-900">{{ count($pendingWithdrawals) }}<span class="text-xl text-gray-400 font-bold ml-2 tracking-normal">yêu cầu</span></h3>
+                <p class="text-[11px] font-bold text-blue-600 mt-3 bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-100 inline-flex items-center gap-1.5">
+                    <i class="fa-solid fa-bell animate-pulse"></i> Cần Admin xử lý chuyển khoản
+                </p>
+            </div>
+            <div class="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-tr from-blue-500 to-indigo-500 text-white flex items-center justify-center text-3xl md:text-4xl shadow-lg shadow-blue-200 group-hover:scale-110 group-hover:rotate-6 transition-transform shrink-0">
+                <i class="fa-solid fa-money-bill-transfer"></i>
             </div>
         </div>
 
-        <nav class="flex-1 p-3 space-y-1">
-            <a href="{{ route('products.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-emerald-500 rounded-xl font-medium transition-all group">
-                <i class="fa-solid fa-house text-lg w-6 shrink-0 group-hover:scale-110 transition-transform text-center"></i>
-                <span x-show="sidebarOpen">Xem Trang Chủ</span>
-            </a>
+    </div>
 
-            <div class="border-t border-gray-100 my-2"></div>
-
-            <a href="{{ route('dashboard') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-emerald-500 rounded-xl transition-all group">
-                <i class="fa-solid fa-chart-pie text-lg w-6 shrink-0 group-hover:scale-110 transition-transform text-center"></i>
-                <span x-show="sidebarOpen">Tổng quan</span>
-            </a>
-
-            <a href="{{ route('orders.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-emerald-500 rounded-xl transition-all group">
-                <i class="fa-solid fa-clipboard-list text-lg w-6 shrink-0 group-hover:scale-110 transition-transform text-center"></i>
-                <span x-show="sidebarOpen">Quản lý Đơn hàng</span>
-            </a>
-
-            <a href="{{ route('wallet.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-emerald-500 rounded-xl transition-all group">
-                <i class="fa-solid fa-wallet text-lg w-6 shrink-0 group-hover:scale-110 transition-transform text-center"></i>
-                <span x-show="sidebarOpen">Ví 2HAND</span>
-            </a>
-
-            <a href="{{ route('profile.edit') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition-all group">
-                <i class="fa-solid fa-user-gear text-lg w-6 shrink-0 group-hover:scale-110 transition-transform text-center"></i>
-                <span x-show="sidebarOpen">Cài đặt tài khoản</span>
-            </a>
-
-            @if(Auth::user()->role === 'admin')
-            <div class="pt-4 my-2 border-t border-gray-100">
-                <p x-show="sidebarOpen" class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Quản trị hệ thống</p>
-                
-                <a href="{{ route('admin.dashboard') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition">
-                    <i class="fa-solid fa-chart-pie text-lg w-6 shrink-0 text-center"></i>
-                    <span x-show="sidebarOpen">Tổng quan Admin</span>
-                </a>
-                
-                <a href="{{ route('admin.users.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition">
-                    <i class="fa-solid fa-users text-lg w-6 shrink-0 text-center"></i>
-                    <span x-show="sidebarOpen">Quản lý Tài khoản</span>
-                </a>
-                <a href="{{ route('admin.categories.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition mt-1">
-                    <i class="fa-solid fa-list text-lg w-6 shrink-0 text-center"></i>
-                    <span x-show="sidebarOpen">Quản lý Danh mục</span>
-                </a>
-                <a href="{{ route('admin.products.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition mt-1">
-                    <i class="fa-solid fa-box text-lg w-6 shrink-0 text-center"></i>
-                    <span x-show="sidebarOpen">Quản lý sản phẩm</span>
-                </a>
-                
-                {{-- NÚT QUẢN TRỊ TÀI CHÍNH (ĐANG ACTIVE - MÀU XANH) --}}
-                <a href="{{ route('admin.wallet.index') }}" class="flex items-center space-x-3 px-4 py-3 bg-emerald-50 text-emerald-600 rounded-xl transition mt-1">
-                    <i class="fa-solid fa-vault text-lg w-6 shrink-0 text-center"></i>
-                    <span x-show="sidebarOpen">Quản trị tài chính</span>
-                </a>
-            </div>
-            @endif
-        </nav>
-    </aside>
-
-    {{-- NỘI DUNG CHÍNH --}}
-    <main class="flex-1 p-8 overflow-y-auto">
-
-        {{-- BỔ SUNG: Header chứa nút bấm đóng mở Sidebar --}}
-        <div class="flex items-center justify-between mb-8">
-            <div class="flex items-center space-x-4">
-                <button @click="sidebarOpen = !sidebarOpen" class="p-2 bg-white rounded-lg shadow border border-gray-200 text-gray-600 hover:bg-gray-50 mr-2 transition-all">
-                    <i class="fa-solid fa-bars"></i>
-                </button>
-                <h1 class="text-2xl font-bold text-gray-800">Quản trị Tài chính & Doanh thu</h1>
-            </div>
+    {{-- ========================================== --}}
+    {{-- 2. BẢNG DANH SÁCH YÊU CẦU RÚT TIỀN --}}
+    {{-- ========================================== --}}
+    <div class="bg-white rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-gray-100 overflow-hidden mb-8">
+        <div class="p-6 border-b border-gray-50 bg-gray-50/30 flex justify-between items-center">
+            <h3 class="font-black text-gray-800 text-lg flex items-center gap-2">
+                <i class="fa-solid fa-clock-rotate-left text-blue-500"></i> Yêu cầu rút tiền chờ xử lý
+            </h3>
         </div>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-50/50 text-gray-500 text-xs font-bold uppercase tracking-wider border-b border-gray-100">
+                        <th class="p-5 w-16 text-center font-black text-gray-400">#</th>
+                        <th class="p-5">Người yêu cầu</th>
+                        <th class="p-5">Số tiền rút</th>
+                        <th class="p-5">Thông tin ngân hàng nhận</th>
+                        <th class="p-5 text-center">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm divide-y divide-gray-50">
+                    @forelse($pendingWithdrawals as $index => $w)
+                    <tr class="hover:bg-gray-50/80 transition-colors group">
+                        <td class="p-5 text-center font-bold text-gray-400">{{ $index + 1 }}</td>
+                        
+                        {{-- Cột Người Yêu Cầu --}}
+                        <td class="p-5">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-black text-sm flex items-center justify-center shrink-0 border border-blue-100 shadow-sm">
+                                    {{ substr($w->user->name, 0, 1) }}
+                                </div>
+                                <div>
+                                    <p class="font-bold text-gray-900">{{ $w->user->name }}</p>
+                                    <p class="text-[11px] text-gray-500">{{ $w->user->email }}</p>
+                                    <p class="text-[10px] text-gray-400 mt-0.5">{{ $w->created_at->format('H:i d/m/Y') }}</p>
+                                </div>
+                            </div>
+                        </td>
 
-        {{-- KHỐI HIỂN THỊ THÔNG BÁO --}}
-        @if(session('success'))
-            <div class="bg-emerald-50 text-emerald-800 p-4 rounded-xl mb-6 font-bold border border-emerald-200">
-                <i class="fa-solid fa-check-circle mr-2"></i> {{ session('success') }}
-            </div>
-        @endif
+                        {{-- Cột Số Tiền --}}
+                        <td class="p-5">
+                            <span class="text-lg font-black text-red-500">{{ number_format($w->amount) }}<span class="text-sm underline ml-0.5">đ</span></span>
+                        </td>
 
-        @if(session('error'))
-            <div class="bg-red-50 text-red-800 p-4 rounded-xl mb-6 font-bold border border-red-200">
-                <i class="fa-solid fa-exclamation-circle mr-2"></i> {{ session('error') }}
-            </div>
-        @endif
+                        {{-- Cột Ngân hàng --}}
+                        <td class="p-5">
+                            <div class="bg-gray-50 p-3.5 rounded-xl border border-gray-100 text-sm font-medium text-gray-800 whitespace-pre-line leading-relaxed max-w-sm">
+                                <i class="fa-solid fa-building-columns text-gray-400 mr-1.5"></i> {{ $w->bank_info }}
+                            </div>
+                        </td>
 
-        {{-- Khối thống kê doanh thu --}}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-emerald-500">
-                <p class="text-sm text-gray-400 font-bold uppercase">Tổng phí sàn thu được (3%)</p>
-                <h3 class="text-3xl font-black text-emerald-600 mt-1">{{ number_format($totalRevenue) }} đ</h3>
-                <p class="text-xs text-gray-500 mt-2 italic">* Tiền này đã nằm trong tài khoản của sàn.</p>
-            </div>
-            
-            <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-blue-500">
-                <p class="text-sm text-gray-400 font-bold uppercase">Lệnh rút tiền chờ duyệt</p>
-                <h3 class="text-3xl font-black text-blue-600 mt-1">{{ count($pendingWithdrawals) }} yêu cầu</h3>
-            </div>
-        </div>
-
-        {{-- Danh sách lệnh rút tiền đang chờ --}}
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
-            <div class="p-4 bg-gray-50 border-b border-gray-100">
-                <h3 class="font-bold text-gray-800"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Yêu cầu rút tiền chờ xử lý</h3>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead class="bg-gray-50 text-xs font-bold text-gray-400 uppercase">
-                        <tr>
-                            <th class="p-4">Người yêu cầu</th>
-                            <th class="p-4">Số tiền rút</th>
-                            <th class="p-4">Thông tin ngân hàng</th>
-                            <th class="p-4 text-center">Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody class="text-sm divide-y divide-gray-100">
-                        @forelse($pendingWithdrawals as $w)
-                        <tr class="hover:bg-gray-50/50 transition-all">
-                            <td class="p-4">
-                                <p class="font-bold text-gray-800">{{ $w->user->name }}</p>
-                                <p class="text-xs text-gray-500">{{ $w->user->email }}</p>
-                            </td>
-                            <td class="p-4 font-black text-red-600">{{ number_format($w->amount) }}đ</td>
-                            <td class="p-4 text-xs text-gray-600">{{ $w->bank_info }}</td>
-                            <td class="p-4 flex justify-center gap-2">
-                                <form action="{{ route('admin.wallet.approve', $w->id) }}" method="POST">
-                                    @csrf
-                                    @method('PATCH') 
-                                    <button class="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-bold hover:bg-emerald-600 transition shadow-sm">Duyệt chi</button>
+                        {{-- Cột Hành động --}}
+                        <td class="p-5">
+                            <div class="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                
+                                {{-- Nút Duyệt --}}
+                                <form action="{{ route('admin.wallet.approve', $w->id) }}" method="POST" onsubmit="return confirm('CẢNH BÁO: Bạn XÁC NHẬN đã chuyển khoản thành công số tiền này cho người dùng qua ứng dụng Ngân hàng của bạn?')">
+                                    @csrf @method('PATCH')
+                                    <button class="flex items-center gap-1.5 px-4 py-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white rounded-xl text-xs font-bold transition-all border border-emerald-100 hover:border-emerald-500 shadow-sm" title="Duyệt chuyển tiền">
+                                        <i class="fa-solid fa-check"></i> Duyệt chi
+                                    </button>
                                 </form>
-                                <form action="{{ route('admin.wallet.reject', $w->id) }}" method="POST">
-                                    @csrf
-                                    @method('PATCH')
-                                    <button class="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-xs font-bold hover:bg-red-200 transition">Từ chối</button>
+
+                                {{-- Nút Từ chối --}}
+                                <form action="{{ route('admin.wallet.reject', $w->id) }}" method="POST" onsubmit="return confirm('Bạn chắc chắn muốn TỪ CHỐI lệnh rút tiền này? Tiền sẽ được hoàn lại vào ví 2HAND của người dùng.')">
+                                    @csrf @method('PATCH')
+                                    <button class="flex items-center gap-1.5 px-4 py-2 bg-red-50 text-red-600 hover:bg-red-500 hover:text-white rounded-xl text-xs font-bold transition-all border border-red-100 hover:border-red-500 shadow-sm" title="Từ chối lệnh rút">
+                                        <i class="fa-solid fa-xmark"></i> Từ chối
+                                    </button>
                                 </form>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="4" class="p-8 text-center text-gray-400 font-medium">Không có yêu cầu rút tiền nào.</td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+
+                            </div>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="5" class="p-16 text-center text-gray-400">
+                            <div class="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-100 shadow-inner">
+                                <i class="fa-solid fa-check-double text-3xl text-emerald-500"></i>
+                            </div>
+                            <p class="font-bold text-gray-700 text-lg mb-1">Tuyệt vời!</p>
+                            <p class="font-medium text-gray-500 text-sm">Hiện tại không có yêu cầu rút tiền nào đang tồn đọng.</p>
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
-    </main>
+    </div>
 </div>
 @endsection

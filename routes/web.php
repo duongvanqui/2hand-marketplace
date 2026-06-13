@@ -2,158 +2,142 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProductController;
-use App\Http\Controllers\Admin\AdminUserController;
-use App\Http\Controllers\Admin\CategoryController;
-use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\WalletController;
+use App\Http\Controllers\ChatController;
+
+use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\AdminProductController;
 use App\Http\Controllers\Admin\AdminWalletController;
 use App\Http\Controllers\Admin\AdminDashboardController;
-use App\Http\Controllers\ChatController;
-use App\Models\Conversation;
-use Illuminate\Support\Facades\Route;
 
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Web Routes
+| KHU VỰC CÔNG KHAI (PUBLIC ROUTES)
 |--------------------------------------------------------------------------
 */
-
-// 1. Trang chủ danh sách sản phẩm
 Route::get('/', [ProductController::class, 'index'])->name('products.index');
-
-// 2. Chi tiết sản phẩm theo slug
 Route::get('/san-pham/{slug}', [ProductController::class, 'show'])->name('products.show');
 
-// 3. Dashboard cá nhân
-Route::get('/dashboard', [ProductController::class, 'dashboard'])
-    ->middleware(['auth', 'verified'])
-    ->name('dashboard');
-
-// 4. Quản lý hồ sơ cá nhân
-Route::middleware('auth')->group(function () {
+/*
+|--------------------------------------------------------------------------
+| KHU VỰC NGƯỜI DÙNG (YÊU CẦU ĐĂNG NHẬP)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'verified'])->group(function () {
+    
+    // 1. Dashboard & Profile
+    Route::get('/dashboard', [ProductController::class, 'dashboard'])->name('dashboard');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
 
-// 5. Đăng tin thanh lý sản phẩm
-Route::middleware(['auth'])->group(function () {
+    // 2. Đăng tin sản phẩm
     Route::get('/dang-tin', [ProductController::class, 'create'])->name('products.create');
     Route::post('/dang-tin', [ProductController::class, 'store'])->name('products.store');
+
+    // 3. Hệ thống Thông báo (Notifications)
+    Route::get('/notifications', function() { 
+        $notifications = auth()->user()->notifications()->paginate(15);
+        return view('notifications.index', compact('notifications')); 
+    })->name('notifications.index');
+
+    Route::post('/notifications/mark-as-read', function () {
+        auth()->user()->unreadNotifications->markAsRead();
+        return response()->json(['success' => true]);
+    })->name('notifications.read');
+    Route::get('/notifications/{id}/click', function($id) {
+        $notification = auth()->user()->notifications()->findOrFail($id);
+        $notification->markAsRead(); // Đánh dấu đã đọc
+        
+        // Chuyển hướng đến URL đích lưu trong thông báo (nếu không có thì về trang chủ)
+        return redirect($notification->data['url'] ?? '/');
+    })->name('notifications.click');
+    // Xóa một thông báo (bằng Ajax)
+    Route::delete('/notifications/{id}', function ($id) {
+        $notification = auth()->user()->notifications()->findOrFail($id);
+        $notification->delete();
+        return response()->json(['success' => true]);
+    })->name('notifications.destroy');
+
+    // 4. Giỏ hàng & Đơn hàng
+    Route::prefix('cart')->name('cart.')->group(function () {
+        Route::get('/', [CartController::class, 'index'])->name('index');
+        Route::post('/add/{id}', [CartController::class, 'add'])->name('add');
+        Route::delete('/remove/{id}', [CartController::class, 'remove'])->name('remove');
+    });
+
+    Route::prefix('orders')->name('orders.')->group(function () {
+        Route::get('/', [OrderController::class, 'index'])->name('index');
+        Route::post('/checkout', [OrderController::class, 'checkout'])->name('checkout.store');
+        Route::post('/{id}/ship', [OrderController::class, 'shipOrder'])->name('ship');
+        Route::post('/{id}/confirm', [OrderController::class, 'confirmReceived'])->name('confirm');
+    });
+
+    // 5. Quản lý Ví (Ví người dùng)
+    Route::prefix('wallet')->name('wallet.')->group(function () {
+        Route::get('/', [WalletController::class, 'index'])->name('index');
+        Route::post('/withdraw', [WalletController::class, 'withdraw'])->name('withdraw');
+    });
+
+    // 6. Hệ thống Chat
+    Route::prefix('chat')->name('chat.')->group(function () {
+        Route::get('/tin-nhan', [ChatController::class, 'index'])->name('index');
+        Route::post('/start/{product}', [ChatController::class, 'startConversation'])->name('start');
+        Route::get('/{conversationId}/messages', [ChatController::class, 'fetchMessages'])->name('messages');
+        Route::post('/{conversationId}/messages', [ChatController::class, 'sendMessage'])->name('send');
+        Route::delete('/{id}', [ChatController::class, 'destroy'])->name('destroy');
+        Route::get('/unread-count', [ChatController::class, 'getUnreadCount'])->name('unread-count');
+    });
 });
 
-// 6. Nhóm chức năng Quản trị (Admin)
+/*
+|--------------------------------------------------------------------------
+| KHU VỰC QUẢN TRỊ VIÊN (ADMIN ROUTES)
+|--------------------------------------------------------------------------
+*/
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
 
-    // --- QUẢN LÝ TÀI KHOẢN (USERS) ---
-    Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
-    Route::post('/users/store', [AdminUserController::class, 'store'])->name('users.store');
-    Route::patch('/users/{id}/toggle-status', [AdminUserController::class, 'toggleStatus'])->name('users.toggle-status');
-    Route::put('/users/update/{id}', [AdminUserController::class, 'update'])->name('users.update');
-    Route::delete('/users/destroy/{id}', [AdminUserController::class, 'destroy'])->name('users.destroy');
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
 
-    // --- QUẢN LÝ DANH MỤC (CATEGORIES) ---
-    Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
-    Route::post('/categories/store', [CategoryController::class, 'store'])->name('categories.store');
-    Route::put('/categories/update/{id}', [CategoryController::class, 'update'])->name('categories.update');
-    Route::delete('/categories/destroy/{id}', [CategoryController::class, 'destroy'])->name('categories.destroy');
+    // Quản lý Users
+    Route::prefix('users')->name('users.')->group(function () {
+        Route::get('/', [AdminUserController::class, 'index'])->name('index');
+        Route::post('/store', [AdminUserController::class, 'store'])->name('store');
+        Route::put('/update/{id}', [AdminUserController::class, 'update'])->name('update');
+        Route::patch('/{id}/toggle-status', [AdminUserController::class, 'toggleStatus'])->name('toggle-status');
+        Route::delete('/destroy/{id}', [AdminUserController::class, 'destroy'])->name('destroy');
+    });
 
-    // --- QUẢN LÝ SẢN PHẨM (ADMIN PRODUCTS) ---
-    // Route::prefix('products')->name('products.')->group(function () {
-    //     Route::get('/', [AdminProductController::class, 'index'])->name('index');
-    //     Route::patch('/{id}/toggle-status', [AdminProductController::class, 'toggleStatus'])->name('toggle-status');
-    //     Route::post('/{id}/push', [AdminProductController::class, 'pushTin'])->name('push');
-    //     Route::delete('/{id}/destroy', [AdminProductController::class, 'destroy'])->name('destroy');
-    // });
+    // Quản lý Danh mục
+    Route::prefix('categories')->name('categories.')->group(function () {
+        Route::get('/', [CategoryController::class, 'index'])->name('index');
+        Route::post('/store', [CategoryController::class, 'store'])->name('store');
+        Route::put('/update/{id}', [CategoryController::class, 'update'])->name('update');
+        Route::delete('/destroy/{id}', [CategoryController::class, 'destroy'])->name('destroy');
+    });
+
+    // Quản lý Sản phẩm
     Route::prefix('products')->name('products.')->group(function () {
-        // Danh sách + tìm kiếm + lọc
         Route::get('/', [AdminProductController::class, 'index'])->name('index');
-
-        // Xem chi tiết / preview
         Route::get('/{id}', [AdminProductController::class, 'show'])->name('show');
-
-        // Duyệt tin
         Route::patch('/{id}/approve', [AdminProductController::class, 'approve'])->name('approve');
-
-        // Từ chối tin
         Route::patch('/{id}/reject', [AdminProductController::class, 'reject'])->name('reject');
-
-        // Ẩn / Hiện tin
         Route::patch('/{id}/toggle-status', [AdminProductController::class, 'toggleStatus'])->name('toggle-status');
-
-        // Đẩy tin lên đầu
         Route::patch('/{id}/push', [AdminProductController::class, 'pushTin'])->name('push');
-
-        // Xóa tin
         Route::delete('/{id}/destroy', [AdminProductController::class, 'destroy'])->name('destroy');
     });
 
+    // Quản lý Ví & Giao dịch
+    Route::prefix('wallet')->name('wallet.')->group(function () {
+        Route::get('/', [AdminWalletController::class, 'index'])->name('index');
+        Route::patch('/{id}/approve', [AdminWalletController::class, 'approve'])->name('approve');
+        Route::patch('/{id}/reject', [AdminWalletController::class, 'reject'])->name('reject');
+    });
 });
-
-// 7.Giỏ hàng:
-Route::middleware('auth')->group(function () {
-    // Giỏ hàng
-    Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
-    Route::post('/cart/add/{id}', [CartController::class, 'add'])->name('cart.add');
-    Route::delete('/cart/remove/{id}', [CartController::class, 'remove'])->name('cart.remove');
-
-    // Chốt đơn & Quản lý
-    Route::post('/checkout', [OrderController::class, 'checkout'])->name('checkout.store');
-    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
-    Route::post('/orders/{id}/ship', [OrderController::class, 'shipOrder'])->name('orders.ship');
-    Route::post('/orders/{id}/confirm', [OrderController::class, 'confirmReceived'])->name('orders.confirm');
-});
-
-// Quản lý Ví
-Route::get('/wallet', [WalletController::class, 'index'])->name('wallet.index');
-Route::post('/wallet/withdraw', [WalletController::class, 'withdraw'])->name('wallet.withdraw');
-
-// Quản lý Ví (Admin)
-Route::middleware(['auth', 'admin'])->prefix('admin/wallet')->name('admin.wallet.')->group(function () {
-    Route::get('/', [AdminWalletController::class, 'index'])->name('index');
-    Route::patch('/{id}/approve', [AdminWalletController::class, 'approve'])->name('approve');
-    Route::patch('/{id}/reject', [AdminWalletController::class, 'reject'])->name('reject');
-});
-
-Route::prefix('admin')->name('admin.')->group(function () {
-    
-    // ĐÃ BỔ SUNG: Route cho trang Master Dashboard của Admin
-    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
-
-    // Các route cũ của bạn giữ nguyên...
-    Route::get('/wallet', [AdminWalletController::class, 'index'])->name('wallet.index');
-    Route::patch('/wallet/approve/{id}', [AdminWalletController::class, 'approve'])->name('wallet.approve');
-    // ...
-});
-
-// Chat
-Route::middleware(['auth'])->group(function () {
-    // ... 
-    
-    // Nơi lấy danh sách tin nhắn cũ
-    Route::get('/chat/{conversationId}/messages', [ChatController::class, 'fetchMessages'])->name('chat.messages');
-    
-    // Nơi nhận tin nhắn mới khi bấm nút Gửi
-    Route::post('/chat/{conversationId}/messages', [ChatController::class, 'sendMessage'])->name('chat.send');
-});
-
-// Route để mở trang giao diện Chat
-Route::get('/chat/{conversationId}', function ($conversationId) {
-    $conversation = Conversation::findOrFail($conversationId);
-    return view('chat.show', compact('conversation'));
-})->name('chat.show');
-
-// Route để bắt đầu hoặc tiếp tục chat về một sản phẩm
-Route::post('/chat/start/{product}', [App\Http\Controllers\ChatController::class, 'startConversation'])
-    ->name('chat.start')
-    ->middleware('auth');
-
-// Trang danh sách hộp thư
-Route::get('/tin-nhan', [App\Http\Controllers\ChatController::class, 'index'])
-    ->name('chat.index')
-    ->middleware('auth');   
 
 require __DIR__ . '/auth.php';

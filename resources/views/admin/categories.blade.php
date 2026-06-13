@@ -1,284 +1,306 @@
-@extends('layouts.app')
+@extends('layouts.admin')
+
+@section('title', 'Quản lý Danh mục - Admin')
+
+{{-- Tùy chỉnh Header theo chuẩn thiết kế mới --}}
+@section('header_title')
+<div class="flex flex-col">
+    <span class="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+        Quản lý danh mục
+    </span>
+    <p class="text-sm text-gray-500 font-medium mt-1">Trang chủ <i class="fa-solid fa-angle-right text-[10px] mx-1"></i> Cấu hình <i class="fa-solid fa-angle-right text-[10px] mx-1"></i> Danh mục</p>
+</div>
+@endsection
 
 @section('content')
-<div class="flex min-h-screen bg-gray-100" x-data="{ sidebarOpen: true }">
+<div class="pb-10">
 
-    {{-- ===== SIDEBAR ===== --}}
-    <aside :class="sidebarOpen ? 'w-64' : 'w-20'"
-        class="bg-white shadow-xl min-h-screen transition-all duration-300 flex flex-col border-r border-gray-200 shrink-0">
+    {{-- HIỂN THỊ THÔNG BÁO FLASH --}}
+    @if(session('success'))
+        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-2xl shadow-sm font-bold mb-6 flex items-center gap-3 animate-fade-in-down">
+            <div class="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-white shrink-0"><i class="fa-solid fa-check"></i></div>
+            {{ session('success') }}
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="bg-red-50 border border-red-200 text-red-800 p-4 rounded-2xl shadow-sm font-bold mb-6 flex items-center gap-3 animate-fade-in-down">
+            <div class="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white shrink-0"><i class="fa-solid fa-xmark"></i></div>
+            {{ session('error') }}
+        </div>
+    @endif
 
-        <div class="p-4 border-b border-gray-100 flex items-center space-x-3 overflow-hidden">
-            <div class="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold shrink-0">
-                {{ substr(Auth::user()->name, 0, 1) }}
+    {{-- ========================================== --}}
+    {{-- 1. THỐNG KÊ TỔNG QUAN (3 CARDS) --}}
+    {{-- ========================================== --}}
+    @php
+        // Tính toán nhanh số liệu danh mục
+        $totalCats = \App\Models\Category::count();
+        $rootCats = \App\Models\Category::whereNull('parent_id')->count();
+        $subCats = $totalCats - $rootCats;
+    @endphp
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+        {{-- Card 1: Tổng số danh mục --}}
+        <div class="bg-white p-6 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-gray-100 hover:shadow-lg transition-all group flex items-center justify-between">
+            <div>
+                <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1">Tổng danh mục</p>
+                <h3 class="text-3xl font-black text-gray-900">{{ number_format($totalCats) }}</h3>
             </div>
-            <div x-show="sidebarOpen" class="transition-opacity duration-300 overflow-hidden">
-                <h2 class="text-sm font-bold text-gray-800 leading-tight truncate">{{ Auth::user()->name }}</h2>
-                <span class="text-xs text-green-500 font-medium">
-                    {{ Auth::user()->role === 'admin' ? 'Quản trị viên' : 'Thành viên' }}
-                </span>
+            <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-2xl group-hover:scale-110 group-hover:-rotate-6 transition-transform">
+                <i class="fa-solid fa-layer-group"></i>
             </div>
         </div>
 
-        <nav class="flex-1 p-3 space-y-1">
-            <a href="{{ route('products.index') }}"
-                class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-emerald-500 rounded-xl font-medium transition-all group">
-                <i class="fa-solid fa-house text-lg w-6 shrink-0 group-hover:scale-110 transition-transform"></i>
-                <span x-show="sidebarOpen">Xem Trang Chủ</span>
-            </a>
-
-            <div class="border-t border-gray-100 my-2"></div>
-
-            <a href="{{ route('dashboard') }}"
-                class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-emerald-500 rounded-xl font-medium transition-all group">
-                <i class="fa-solid fa-chart-pie text-lg w-6 shrink-0 group-hover:scale-110 transition-transform"></i>
-                <span x-show="sidebarOpen">Tổng quan</span>
-            </a>
-
-            <a href="{{ route('orders.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-emerald-500 rounded-xl transition-all group">
-                <i class="fa-solid fa-clipboard-list text-lg w-6 shrink-0 group-hover:scale-110 transition-transform text-center"></i>
-                <span x-show="sidebarOpen">Quản lý Đơn hàng</span>
-            </a>
-
-            <a href="{{ route('wallet.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-emerald-500 rounded-xl transition-all group">
-                <i class="fa-solid fa-wallet text-lg w-6 shrink-0 group-hover:scale-110 transition-transform text-center"></i>
-                <span x-show="sidebarOpen">Ví 2HAND</span>
-
-            <a href="{{ route('profile.edit') }}"
-                class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-emerald-500 rounded-xl font-medium transition-all group">
-                <i class="fa-solid fa-user-gear text-lg w-6 shrink-0 group-hover:scale-110 transition-transform"></i>
-                <span x-show="sidebarOpen">Cài đặt tài khoản</span>
-            </a>
-
-            @if(Auth::user()->role === 'admin')
-            <div class="pt-4 my-2 border-t border-gray-100">
-                <p x-show="sidebarOpen" class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Quản trị hệ thống</p>
-
-                <a href="{{ route('admin.dashboard') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition">
-                    <i class="fa-solid fa-chart-pie text-lg w-6 shrink-0 text-center"></i>
-                    <span x-show="sidebarOpen">Tổng quan Admin</span>
-                </a>
-
-                <a href="{{ route('admin.users.index') }}"
-                    class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition">
-                    <i class="fa-solid fa-users text-lg w-6 shrink-0"></i>
-                    <span x-show="sidebarOpen">Quản lý Tài khoản</span>
-                </a>
-
-                <a href="{{ route('admin.categories.index') }}"
-                    class="flex items-center space-x-3 px-4 py-3 bg-emerald-50 text-emerald-600 font-semibold rounded-xl transition mt-1">
-                    <i class="fa-solid fa-list text-lg w-6 shrink-0"></i>
-                    <span x-show="sidebarOpen">Quản lý Danh mục</span>
-                </a>
-
-                <a href="{{ route('admin.products.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition mt-1">
-                    <i class="fa-solid fa-box text-lg w-6 shrink-0 text-center"></i>
-                    <span x-show="sidebarOpen">Quản lý sản phẩm</span>
-                </a>
-
-                <a href="{{ route('admin.wallet.index') }}" class="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition mt-1">
-                    <i class="fa-solid fa-vault text-lg w-6 shrink-0 text-center"></i>
-                    <span x-show="sidebarOpen">Quản trị tài chính</span>
-                </a>
+        {{-- Card 2: Danh mục gốc --}}
+        <div class="bg-white p-6 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-gray-100 hover:shadow-lg transition-all group flex items-center justify-between">
+            <div>
+                <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1">Danh mục gốc (Cha)</p>
+                <h3 class="text-3xl font-black text-gray-900">{{ number_format($rootCats) }}</h3>
             </div>
+            <div class="w-14 h-14 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center text-2xl group-hover:scale-110 group-hover:-rotate-6 transition-transform">
+                <i class="fa-solid fa-folder-tree"></i>
+            </div>
+        </div>
+
+        {{-- Card 3: Danh mục con --}}
+        <div class="bg-white p-6 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-gray-100 hover:shadow-lg transition-all group flex items-center justify-between">
+            <div>
+                <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1">Danh mục con</p>
+                <h3 class="text-3xl font-black text-gray-900">{{ number_format($subCats) }}</h3>
+            </div>
+            <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl group-hover:scale-110 group-hover:-rotate-6 transition-transform">
+                <i class="fa-solid fa-code-branch"></i>
+            </div>
+        </div>
+    </div>
+
+    {{-- ========================================== --}}
+    {{-- 2. THANH CÔNG CỤ (TÌM KIẾM & THÊM MỚI) --}}
+    {{-- ========================================== --}}
+    <div class="bg-white p-4 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+        
+        {{-- Tìm kiếm Form --}}
+        <form action="{{ route('admin.categories.index') }}" method="GET" class="flex items-center gap-3 w-full md:w-1/2">
+            <div class="relative w-full">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </div>
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Tìm kiếm tên danh mục..." class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50 transition-all font-medium">
+            </div>
+            <button type="submit" class="hidden"></button>
+            @if(request('search'))
+                <a href="{{ route('admin.categories.index') }}" class="px-4 py-2.5 bg-red-50 text-red-600 text-sm font-bold rounded-xl hover:bg-red-100 transition shadow-sm border border-red-100 whitespace-nowrap">
+                    <i class="fa-solid fa-xmark mr-1"></i> Xóa lọc
+                </a>
             @endif
-        </nav>
-    </aside>
+        </form>
 
-    {{-- ===== MAIN ===== --}}
-    <main class="flex-1 p-8">
+        {{-- Nút Thêm Mới --}}
+        <button onclick="openModal('modal-add-category')" class="w-full md:w-auto px-6 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition shadow-md shadow-blue-200 flex items-center justify-center gap-2 transform hover:-translate-y-0.5">
+            <i class="fa-solid fa-plus"></i> Thêm danh mục
+        </button>
+    </div>
 
-        {{-- Header --}}
-        <div class="flex items-center justify-between mb-8">
-            <div class="flex items-center space-x-4">
-                <button @click="sidebarOpen = !sidebarOpen"
-                    class="p-2 bg-white rounded-lg shadow border border-gray-200 text-gray-600 hover:bg-gray-50 mr-2">
-                    <i class="fa-solid fa-bars"></i>
-                </button>
-                <h1 class="text-2xl font-bold text-gray-800">Quản Lý Danh Mục</h1>
-            </div>
-            <button onclick="openModal('modal-add-category')"
-                class="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition font-medium text-sm shadow-sm">
-                + Thêm danh mục mới
-            </button>
-        </div>
-
-        {{-- Flash messages --}}
-        @if(session('success'))
-            <div class="mb-6 p-4 bg-green-50 text-green-700 rounded-xl border border-green-100 font-medium">
-                <i class="fa-solid fa-circle-check mr-2"></i>{{ session('success') }}
-            </div>
-        @endif
-        @if(session('error'))
-            <div class="mb-6 p-4 bg-red-50 text-red-700 rounded-xl border border-red-100 font-medium">
-                <i class="fa-solid fa-circle-exclamation mr-2"></i>{{ session('error') }}
-            </div>
-        @endif
-
-        {{-- Search --}}
-        <div class="mb-6 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-            <form action="{{ route('admin.categories.index') }}" method="GET" class="flex gap-2 w-full md:w-1/2">
-                <input type="text" name="search" value="{{ request('search') }}"
-                    placeholder="Tìm tên danh mục..."
-                    class="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50">
-                <button type="submit"
-                    class="px-4 py-2 bg-gray-800 text-white text-sm rounded-xl hover:bg-gray-700 transition">Tìm</button>
-                @if(request('search'))
-                    <a href="{{ route('admin.categories.index') }}"
-                        class="px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-xl hover:bg-gray-200 flex items-center transition">Hủy</a>
-                @endif
-            </form>
-        </div>
-
-        {{-- Table --}}
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-gray-50 text-gray-400 text-xs font-semibold uppercase border-b border-gray-100">
-                            <th class="p-4">STT</th>
-                            <th class="p-4">Tên Danh Mục</th>
-                            <th class="p-4">Danh Mục Cha</th>
-                            <th class="p-4">Đường dẫn URL (Slug)</th>
-                            <th class="p-4">Ngày tạo</th>
-                            <th class="p-4 text-center">Hành Động</th>
-                        </tr>
-                    </thead>
-                    <tbody class="text-sm divide-y divide-gray-100">
-                        @forelse($categories as $index => $category)
-                        <tr class="hover:bg-gray-50/50 transition-all">
-                            <td class="p-4 text-gray-500">{{ $categories->firstItem() + $index }}</td>
-                            <td class="p-4 font-semibold text-gray-800">{{ $category->name }}</td>
-                            <td class="p-4">
-                                @if($category->parent)
-                                    <span class="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-medium border border-slate-200/60">
-                                        {{ $category->parent->name }}
-                                    </span>
-                                @else
-                                    <span class="px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-medium border border-indigo-100/80">
-                                        Danh mục gốc
-                                    </span>
-                                @endif
-                            </td>
-                            <td class="p-4 text-gray-500 font-mono text-xs">{{ $category->slug }}</td>
-                            <td class="p-4 text-gray-500">{{ $category->created_at ? $category->created_at->format('d/m/Y') : '---' }}</td>
-                            <td class="p-4">
-                                <div class="flex items-center justify-center space-x-2">
-                                    <button type="button" onclick="openEditModal({{ json_encode($category) }})"
-                                        class="p-1.5 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-all" title="Sửa">
-                                        <i class="fa-solid fa-pen-to-square"></i>
-                                    </button>
-
-                                    <form action="{{ route('admin.categories.destroy', $category->id) }}" method="POST"
-                                        onsubmit="return confirm('Bạn có chắc chắn muốn xóa danh mục này? Tất cả danh mục con thuộc nó (nếu có) cũng sẽ bị ảnh hưởng.')">
-                                        @csrf @method('DELETE')
-                                        <button type="submit"
-                                            class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Xóa">
-                                            <i class="fa-solid fa-trash-can"></i>
-                                        </button>
-                                    </form>
+    {{-- ========================================== --}}
+    {{-- 3. BẢNG QUẢN LÝ DANH MỤC --}}
+    {{-- ========================================== --}}
+    <div class="bg-white rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-50/50 text-gray-500 text-xs font-bold uppercase tracking-wider border-b border-gray-100">
+                        <th class="p-5 font-black text-gray-400 w-16 text-center">#</th>
+                        <th class="p-5">Tên Danh Mục</th>
+                        <th class="p-5">Cấp Bậc (Phân loại)</th>
+                        <th class="p-5">Đường dẫn (Slug)</th>
+                        <th class="p-5">Ngày tạo</th>
+                        <th class="p-5 text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm divide-y divide-gray-50">
+                    @forelse($categories as $index => $category)
+                    <tr class="hover:bg-gray-50/80 transition-colors group">
+                        <td class="p-5 text-gray-400 font-bold text-center">{{ $categories->firstItem() + $index }}</td>
+                        
+                        {{-- Tên danh mục (Kèm Icon giả lập) --}}
+                        <td class="p-5">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border shadow-sm {{ $category->parent_id ? 'bg-white border-gray-200 text-gray-400' : 'bg-blue-50 border-blue-100 text-blue-600' }}">
+                                    <i class="fa-solid {{ $category->parent_id ? 'fa-tag' : 'fa-folder-open' }}"></i>
                                 </div>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="6" class="p-10 text-center text-gray-400 font-medium">
-                                <i class="fa-solid fa-list text-2xl mb-2 block"></i>
-                                Chưa có danh mục nào được tạo hoặc tìm thấy.
-                            </td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+                                <span class="font-bold text-gray-900 text-base">{{ $category->name }}</span>
+                            </div>
+                        </td>
 
-            @if($categories->hasPages())
-            <div class="p-4 border-t border-gray-100 bg-gray-50/50">
-                {{ $categories->appends(request()->query())->links() }}
-            </div>
-            @endif
+                        {{-- Cấp Bậc (Cha/Con) --}}
+                        <td class="p-5">
+                            @if($category->parent)
+                                <div class="flex items-center gap-2">
+                                    <i class="fa-solid fa-turn-up text-gray-300 rotate-90"></i>
+                                    <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded-md text-xs font-bold border border-gray-200">
+                                        Thuộc: {{ $category->parent->name }}
+                                    </span>
+                                </div>
+                            @else
+                                <span class="px-3 py-1 bg-purple-50 text-purple-700 rounded-md text-xs font-bold border border-purple-100">
+                                    <i class="fa-solid fa-crown mr-1"></i> Danh mục gốc
+                                </span>
+                            @endif
+                        </td>
+
+                        {{-- Slug --}}
+                        <td class="p-5">
+                            <span class="font-mono text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-100">{{ $category->slug }}</span>
+                        </td>
+
+                        {{-- Ngày tạo --}}
+                        <td class="p-5 text-gray-500 font-medium text-xs">
+                            {{ $category->created_at ? $category->created_at->format('d/m/Y') : '---' }}
+                        </td>
+
+                        {{-- Thao tác --}}
+                        <td class="p-5">
+                            <div class="flex items-center justify-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                
+                                {{-- Nút Sửa --}}
+                                <button type="button" onclick="openEditModal({{ json_encode($category) }})" class="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm" title="Sửa danh mục">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+
+                                {{-- Nút Xóa --}}
+                                <form action="{{ route('admin.categories.destroy', $category->id) }}" method="POST" class="inline" onsubmit="return confirm('CẢNH BÁO: Xóa danh mục này có thể ảnh hưởng đến các sản phẩm và danh mục con thuộc về nó. Bạn chắc chắn chứ?')">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="w-8 h-8 rounded-lg flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm" title="Xóa danh mục">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="6" class="p-16 text-center text-gray-400">
+                            <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-100 shadow-inner">
+                                <i class="fa-solid fa-folder-open text-3xl text-gray-300"></i>
+                            </div>
+                            <p class="font-medium text-gray-500">Chưa có danh mục nào được tạo hoặc tìm thấy.</p>
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
-    </main>
+
+        {{-- Phân trang --}}
+        @if($categories->hasPages())
+        <div class="p-4 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center text-sm text-gray-500">
+            <p>Hiển thị từ <span class="font-bold text-gray-900">{{ $categories->firstItem() }}</span> đến <span class="font-bold text-gray-900">{{ $categories->lastItem() }}</span></p>
+            {{ $categories->appends(request()->query())->links() }}
+        </div>
+        @endif
+    </div>
 </div>
 
-{{-- Modal Thêm danh mục --}}
-<div id="modal-add-category" class="fixed inset-0 z-50 hidden bg-black/50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-        <h3 class="text-lg font-bold text-gray-800 mb-5">Thêm Danh Mục Mới</h3>
-        <form action="{{ route('admin.categories.store') }}" method="POST">
+{{-- ========================================== --}}
+{{-- MODALS THÊM / SỬA CHUẨN UI --}}
+{{-- ========================================== --}}
+
+{{-- Modal Thêm Danh Mục --}}
+<div id="modal-add-category" class="fixed inset-0 z-50 hidden bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col transform transition-all">
+        <div class="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+            <h3 class="text-xl font-black text-gray-800 flex items-center gap-2"><i class="fa-solid fa-layer-group text-blue-600"></i> Thêm Danh Mục Mới</h3>
+        </div>
+        <form action="{{ route('admin.categories.store') }}" method="POST" class="p-6 space-y-5">
             @csrf
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Tên Danh Mục</label>
-                <input type="text" name="name" value="{{ old('name') }}" required
-                    placeholder="Ví dụ: Điện thoại & Máy tính"
-                    class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50
-                        {{ $errors->has('name') && !old('category_id') ? 'border-red-400' : '' }}">
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Tên Danh Mục <span class="text-red-500">*</span></label>
+                <input type="text" name="name" value="{{ old('name') }}" required placeholder="Ví dụ: Đồ điện tử..." 
+                    class="w-full px-4 py-3 border border-gray-200 bg-gray-50/50 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50 transition-all {{ $errors->has('name') && !old('category_id') ? 'border-red-400' : '' }}">
                 @if($errors->has('name') && !old('category_id'))
-                    <p class="text-red-500 text-xs mt-1">{{ $errors->first('name') }}</p>
+                    <p class="text-red-500 text-xs mt-1 font-bold"><i class="fa-solid fa-circle-exclamation"></i> {{ $errors->first('name') }}</p>
                 @endif
             </div>
 
-            <div class="mb-5">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Thuộc Danh Mục Cha</label>
-                <select name="parent_id" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 bg-white">
-                    <option value="">-- Không chọn (Là danh mục gốc) --</option>
-                    @foreach(\App\Models\Category::whereNull('parent_id')->get() as $parent)
-                        <option value="{{ $parent->id }}" {{ old('parent_id') == $parent->id ? 'selected' : '' }}>{{ $parent->name }}</option>
-                    @endforeach
-                </select>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Cấp bậc (Thuộc danh mục nào?)</label>
+                <div class="relative">
+                    <select name="parent_id" class="w-full px-4 py-3 border border-gray-200 bg-gray-50/50 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50 transition-all cursor-pointer appearance-none">
+                        <option value="" class="font-bold">👑 Không chọn (Tạo danh mục gốc)</option>
+                        <optgroup label="Chọn làm danh mục con của:">
+                            @foreach(\App\Models\Category::whereNull('parent_id')->get() as $parent)
+                                <option value="{{ $parent->id }}" {{ old('parent_id') == $parent->id ? 'selected' : '' }}>↳ {{ $parent->name }}</option>
+                            @endforeach
+                        </optgroup>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400"><i class="fa-solid fa-angle-down"></i></div>
+                </div>
             </div>
 
-            <div class="flex justify-end gap-3">
-                <button type="button" onclick="closeModal('modal-add-category')"
-                    class="px-4 py-2 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 text-sm transition">Hủy</button>
-                <button type="submit"
-                    class="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 text-sm transition font-medium">Lưu lại</button>
+            <div class="flex justify-end gap-3 pt-4 border-t border-gray-50 mt-4">
+                <button type="button" onclick="closeModal('modal-add-category')" class="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-sm transition">Hủy</button>
+                <button type="submit" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition shadow-md shadow-blue-200">Lưu danh mục</button>
             </div>
         </form>
     </div>
 </div>
 
-{{-- Modal Sửa danh mục --}}
-<div id="modal-edit-category" class="fixed inset-0 z-50 hidden bg-black/50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-        <h3 class="text-lg font-bold text-gray-800 mb-5">Chỉnh Sửa Danh Mục</h3>
-        <form id="form-edit-category" action="" method="POST">
+{{-- Modal Sửa Danh Mục --}}
+<div id="modal-edit-category" class="fixed inset-0 z-50 hidden bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col transform transition-all">
+        <div class="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+            <h3 class="text-xl font-black text-gray-800 flex items-center gap-2"><i class="fa-solid fa-pen-to-square text-indigo-600"></i> Chỉnh Sửa Danh Mục</h3>
+        </div>
+        <form id="form-edit-category" action="" method="POST" class="p-6 space-y-5">
             @csrf @method('PUT')
             <input type="hidden" id="edit-category-id" name="category_id" value="{{ old('category_id') }}">
             
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Tên Danh Mục</label>
-                <input type="text" id="edit-category-name" name="name" value="{{ old('name') }}" required
-                    class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50
-                        {{ $errors->has('name') && old('category_id') ? 'border-red-400' : '' }}">
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Tên Danh Mục <span class="text-red-500">*</span></label>
+                <input type="text" id="edit-category-name" name="name" value="{{ old('name') }}" required 
+                    class="w-full px-4 py-3 border border-gray-200 bg-gray-50/50 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all {{ $errors->has('name') && old('category_id') ? 'border-red-400' : '' }}">
                 @if($errors->has('name') && old('category_id'))
-                    <p class="text-red-500 text-xs mt-1">{{ $errors->first('name') }}</p>
+                    <p class="text-red-500 text-xs mt-1 font-bold"><i class="fa-solid fa-circle-exclamation"></i> {{ $errors->first('name') }}</p>
                 @endif
             </div>
 
-            <div class="mb-5">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Thuộc Danh Mục Cha</label>
-                <select id="edit-category-parent-id" name="parent_id" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 bg-white">
-                    <option value="">-- Không chọn (Là danh mục gốc) --</option>
-                    @foreach(\App\Models\Category::all() as $parent)
-                        <option value="{{ $parent->id }}" class="edit-parent-option">{{ $parent->name }}</option>
-                    @endforeach
-                </select>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Cấp bậc (Thuộc danh mục nào?)</label>
+                <div class="relative">
+                    <select id="edit-category-parent-id" name="parent_id" class="w-full px-4 py-3 border border-gray-200 bg-gray-50/50 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all cursor-pointer appearance-none">
+                        <option value="" class="font-bold">👑 Trở thành Danh mục gốc</option>
+                        <optgroup label="Đổi thành danh mục con của:">
+                            @foreach(\App\Models\Category::all() as $parent)
+                                <option value="{{ $parent->id }}" class="edit-parent-option">↳ {{ $parent->name }}</option>
+                            @endforeach
+                        </optgroup>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400"><i class="fa-solid fa-angle-down"></i></div>
+                </div>
             </div>
 
-            <div class="flex justify-end gap-3">
-                <button type="button" onclick="closeModal('modal-edit-category')"
-                    class="px-4 py-2 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 text-sm transition">Hủy</button>
-                <button type="submit"
-                    class="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 text-sm transition font-medium">Cập nhật</button>
+            <div class="flex justify-end gap-3 pt-4 border-t border-gray-50 mt-4">
+                <button type="button" onclick="closeModal('modal-edit-category')" class="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-sm transition">Hủy</button>
+                <button type="submit" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition shadow-md shadow-indigo-200">Cập nhật thay đổi</button>
             </div>
         </form>
     </div>
 </div>
 
-<script>
-    function openModal(id)  { document.getElementById(id).classList.remove('hidden'); }
-    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+@endsection
 
+@section('scripts')
+<script>
+    // Logic bật tắt Modal cực mượt, có khóa cuộn trang
+    function openModal(id) { 
+        document.getElementById(id).classList.remove('hidden'); 
+        document.body.style.overflow = 'hidden';
+    }
+    function closeModal(id) { 
+        document.getElementById(id).classList.add('hidden'); 
+        document.body.style.overflow = 'auto';
+    }
+
+    // Logic đổ dữ liệu Sửa
     function openEditModal(category) {
         document.getElementById('edit-category-id').value   = category.id;
         document.getElementById('edit-category-name').value = category.name;
@@ -286,15 +308,20 @@
         const parentSelect = document.getElementById('edit-category-parent-id');
         parentSelect.value = category.parent_id || '';
 
-        // Logic thông minh chặn việc chọn chính danh mục đó làm cha của nó
+        // Tắt (Disable) lựa chọn chính nó làm cha của nó để tránh lỗi logic đệ quy
         const options = parentSelect.querySelectorAll('.edit-parent-option');
         options.forEach(option => {
             if (parseInt(option.value) === category.id) {
                 option.disabled = true;
-                option.classList.add('bg-gray-100', 'text-gray-400');
+                option.classList.add('bg-gray-200', 'text-gray-400');
+                option.innerHTML = `↳ ${category.name} (Không thể chọn chính nó)`;
             } else {
                 option.disabled = false;
-                option.classList.remove('bg-gray-100', 'text-gray-400');
+                option.classList.remove('bg-gray-200', 'text-gray-400');
+                // Trả lại tên gốc nếu trước đó bị disable
+                if(option.innerHTML.includes('(Không thể chọn chính nó)')) {
+                    option.innerHTML = option.innerHTML.replace(' (Không thể chọn chính nó)', '');
+                }
             }
         });
 
@@ -302,7 +329,7 @@
         openModal('modal-edit-category');
     }
 
-    // Tự động mở lại đúng modal khi có lỗi validation từ hệ thống trả về
+    // Tự động mở lại modal nếu có lỗi Validate từ Server (Tránh khách phải bấm lại)
     @if($errors->any())
         @if(old('category_id'))
             document.getElementById('form-edit-category').action = '/admin/categories/update/{{ old('category_id') }}';
@@ -313,7 +340,7 @@
             opts.forEach(opt => {
                 if (parseInt(opt.value) === {{ old('category_id') }}) {
                     opt.disabled = true;
-                    opt.classList.add('bg-gray-100', 'text-gray-400');
+                    opt.classList.add('bg-gray-200', 'text-gray-400');
                 }
             });
             openModal('modal-edit-category');

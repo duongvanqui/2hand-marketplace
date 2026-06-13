@@ -20,91 +20,131 @@ class ChatController extends Controller
             abort(403, 'Bạn không có quyền truy cập phòng chat này.');
         }
 
+        // ========================================================
+        // TÍNH NĂNG MỚI: ĐÁNH DẤU LÀ "ĐÃ ĐỌC" ĐỂ TẮT THÔNG BÁO ĐỎ
+        // Cập nhật tất cả tin nhắn do ĐỐI PHƯƠNG gửi thành đã đọc
+        // ========================================================
+        Message::where('conversation_id', $conversationId)
+            ->where('sender_id', '!=', Auth::id())
+            ->where('is_read', false)
+            ->update(['is_read' => true]);
+
         // Trả về danh sách tin nhắn cùng với thông tin người gửi
         $messages = Message::with('sender')->where('conversation_id', $conversationId)->get();
 
         return response()->json($messages);
     }
 
-    // 2. Xử lý Gửi tin nhắn mới
+    // 2. Gửi tin nhắn (HỖ TRỢ GỬI ẢNH)
     public function sendMessage(Request $request, $conversationId)
     {
-        // Kiểm tra nội dung tin nhắn không được rỗng
         $request->validate([
-            'message' => 'required|string'
+            'message' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120' // Max 5MB
         ]);
+
+        if (!$request->message && !$request->hasFile('image')) {
+            return response()->json(['error' => 'Vui lòng nhập tin nhắn hoặc chọn ảnh'], 422);
+        }
 
         $conversation = Conversation::findOrFail($conversationId);
 
-        // Kiểm tra bảo mật
         if (Auth::id() !== $conversation->buyer_id && Auth::id() !== $conversation->seller_id) {
             abort(403, 'Bạn không có quyền gửi tin vào phòng chat này.');
         }
 
-        // Lưu tin nhắn vào Database
+        // Xử lý lưu ảnh nếu có
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('chat_images', 'public');
+        }
+
         $message = Message::create([
             'conversation_id' => $conversation->id,
             'sender_id' => Auth::id(),
             'message' => $request->message,
+            'image_path' => $imagePath, // Lưu đường dẫn ảnh
+            // Mặc định is_read trong DB sẽ tự động là false
         ]);
 
-        // Lấy thêm thông tin user gửi để đưa lên màn hình (Avatar, Tên...)
         $message->load('sender');
 
-        // PHÉP THUẬT NẰM Ở ĐÂY: Kích hoạt sự kiện phát sóng lên Pusher
+        // Cập nhật thời gian phòng chat để nó nhảy lên top hộp thư
+        $conversation->touch();
+
         broadcast(new MessageSent($message))->toOthers();
 
-        // Trả về tin nhắn vừa gửi cho Frontend
         return response()->json(['status' => 'success', 'message' => $message]);
     }
 
+    // 3. Tạo phòng chat mới từ trang chi tiết sản phẩm
     public function startConversation(Request $request, $productId)
     {
-        // Lấy thông tin sản phẩm
         $product = \App\Models\Product::findOrFail($productId);
+        $buyerId = Auth::id();
+        $sellerId = $product->user_id;
 
-        $buyerId = Auth::id(); // ID của bạn (người đang đăng nhập)
-        $sellerId = $product->user_id; // ID của người bán (Lưu ý: Nếu bảng products của bạn dùng cột khác như 'seller_id' thì nhớ sửa lại cho đúng nhé)
-
-        // Chặn người dùng tự nhắn tin cho chính sản phẩm của mình
+        // Chặn người dùng tự nhắn tin cho chính mình
         if ($buyerId === $sellerId) {
-            return back()->with('error', 'Bạn không thể tự nhắn tin cho sản phẩm của chính mình!');
+            return response()->json(['error' => 'Bạn không thể tự nhắn tin cho sản phẩm của chính mình!']);
         }
 
-        // Kiểm tra xem phòng chat giữa 2 người về sản phẩm này đã tồn tại chưa
-        $conversation = \App\Models\Conversation::where('buyer_id', $buyerId)
-            ->where('seller_id', $sellerId)
-            ->where('product_id', $product->id)
-            ->first();
+        // Tìm phòng chat cũ hoặc tạo phòng mới nếu chưa có
+        $conversation = \App\Models\Conversation::firstOrCreate([
+            'buyer_id'   => $buyerId,
+            'seller_id'  => $sellerId,
+            'product_id' => $product->id,
+        ]);
 
-        // Nếu chưa từng chat, tạo phòng chat mới
-        if (!$conversation) {
-            $conversation = \App\Models\Conversation::create([
-                'buyer_id'   => $buyerId,
-                'seller_id'  => $sellerId,
-                'product_id' => $product->id,
-            ]);
-        }
-
-        // Chuyển hướng người dùng sang trang giao diện Chat (ID phòng chat tương ứng)
-        // Lưu ý: Đảm bảo route 'chat.show' là cái route trỏ tới trang chat của bạn
         return response()->json([
             'success' => true,
             'conversation_id' => $conversation->id
         ]);
     }
 
+    // 4. Lấy danh sách hộp thư (ẨN PHÒNG CHAT TRỐNG)
     public function index()
-{
-    $userId = Auth::id();
+    {
+        $userId = Auth::id();
 
-    // Lấy danh sách phòng chat, nạp sẵn thông tin Sản phẩm, Người mua, Người bán
-    $conversations = \App\Models\Conversation::where('buyer_id', $userId)
-                        ->orWhere('seller_id', $userId)
+        // Chỉ lấy những phòng chat CÓ ÍT NHẤT 1 TIN NHẮN (has('messages'))
+        $conversations = \App\Models\Conversation::where(function($q) use ($userId) {
+                            $q->where('buyer_id', $userId)
+                              ->orWhere('seller_id', $userId);
+                        })
+                        ->has('messages') 
                         ->with(['product', 'buyer', 'seller'])
                         ->orderBy('updated_at', 'desc')
                         ->get();
 
-    return view('chat.index', compact('conversations'));
-}
+        return view('chat.index', compact('conversations'));
+    }
+
+    // 5. XÓA CUỘC TRÒ CHUYỆN
+    public function destroy($id)
+    {
+        $conversation = Conversation::findOrFail($id);
+
+        if (Auth::id() !== $conversation->buyer_id && Auth::id() !== $conversation->seller_id) {
+            abort(403, 'Không có quyền xóa.');
+        }
+
+        // Xóa phòng chat (tin nhắn con sẽ bị xóa theo nếu DB thiết lập cascade, hoặc bạn tự xóa tay)
+        $conversation->messages()->delete();
+        $conversation->delete();
+
+        return redirect()->back()->with('success', 'Đã xóa đoạn chat thành công!');
+    }
+
+    public function getUnreadCount()
+    {
+        $count = \App\Models\Message::whereHas('conversation', function($q) {
+            $q->where('buyer_id', Auth::id())->orWhere('seller_id', Auth::id());
+        })
+        ->where('sender_id', '!=', Auth::id())
+        ->where('is_read', false)
+        ->count();
+
+        return response()->json(['count' => $count]);
+    }
 }

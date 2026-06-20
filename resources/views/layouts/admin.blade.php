@@ -81,31 +81,35 @@
 
                 <p x-show="sidebarOpen" class="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-2 mb-2 mt-4 whitespace-nowrap">Quản lý cá nhân</p>
 
+                {{-- 1. Tổng quan --}}
                 <a href="{{ route('dashboard') }}" class="relative flex items-center px-3 py-3 rounded-xl font-medium transition-all duration-300 group overflow-hidden {{ request()->routeIs('dashboard') ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200/50' : 'text-gray-500 hover:bg-gray-50 hover:text-emerald-600 hover:translate-x-1' }}">
                     <i class="fa-solid fa-chart-pie text-lg w-8 text-center transition-transform duration-300 group-hover:scale-110"></i>
                     <span x-show="sidebarOpen" class="whitespace-nowrap transition-opacity">Tổng quan</span>
                 </a>
 
+                {{-- 2. Sản phẩm của tôi --}}
+                <a href="{{ route('my.products') }}" class="relative flex items-center px-3 py-3 rounded-xl font-medium transition-all duration-300 group overflow-hidden {{ request()->routeIs('my.products', 'products.create', 'products.edit') ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200/50' : 'text-gray-500 hover:bg-gray-50 hover:text-emerald-600 hover:translate-x-1' }}">
+                    <i class="fa-solid fa-box-open text-lg w-8 text-center transition-transform duration-300 group-hover:scale-110"></i>
+                    <span x-show="sidebarOpen" class="whitespace-nowrap transition-opacity">Sản phẩm của tôi</span>
+                </a>
+
+                {{-- 3. Quản lý đơn hàng --}}
                 <a href="{{ route('orders.index') }}" class="relative flex items-center px-3 py-3 rounded-xl font-medium transition-all duration-300 group overflow-hidden {{ request()->routeIs('orders.*') ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200/50' : 'text-gray-500 hover:bg-gray-50 hover:text-emerald-600 hover:translate-x-1' }}">
                     <i class="fa-solid fa-clipboard-list text-lg w-8 text-center transition-transform duration-300 group-hover:scale-110"></i>
                     <span x-show="sidebarOpen" class="whitespace-nowrap transition-opacity">Quản lý Đơn hàng</span>
                 </a>
 
-                <a href="{{ route('wallet.index') }}" class="relative flex items-center px-3 py-3 rounded-xl font-medium transition-all duration-300 group overflow-hidden {{ request()->routeIs('wallet.*') ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200/50' : 'text-gray-500 hover:bg-gray-50 hover:text-emerald-600 hover:translate-x-1' }}">
-                    <i class="fa-solid fa-wallet text-lg w-8 text-center transition-transform duration-300 group-hover:scale-110"></i>
-                    <span x-show="sidebarOpen" class="whitespace-nowrap transition-opacity">Ví 2HAND</span>
-                </a>
-
                 {{-- Logic đếm số TIN NHẮN CHƯA ĐỌC --}}
                 @php
                 $unreadCount = \App\Models\Message::whereHas('conversation', function($q) {
-                    $q->where('buyer_id', Auth::id())->orWhere('seller_id', Auth::id());
+                $q->where('buyer_id', Auth::id())->orWhere('seller_id', Auth::id());
                 })
                 ->where('sender_id', '!=', Auth::id())
                 ->where('is_read', false)
                 ->count();
                 @endphp
 
+                {{-- 4. Tin nhắn --}}
                 <a href="{{ route('chat.index') }}"
                     x-data="{ unreadCount: parseInt('{{ $unreadCount }}') || 0 }"
                     @update-unread-count.window="unreadCount = $event.detail === 'increment' ? unreadCount + 1 : parseInt($event.detail)"
@@ -122,12 +126,11 @@
                     </span>
                 </a>
 
-                {{-- ========================================== --}}
-                {{-- NÚT THÔNG BÁO (VỪA ĐƯỢC THÊM VÀO Ở ĐÂY)    --}}
-                {{-- ========================================== --}}
+                {{-- MỤC THÔNG BÁO --}}
                 @php
-                    $unreadNotiCount = Auth::check() ? Auth::user()->unreadNotifications->count() : 0;
+                $unreadNotiCount = Auth::check() ? Auth::user()->unreadNotifications->count() : 0;
                 @endphp
+                {{-- 5. Thông báo --}}
                 <a href="{{ route('notifications.index') }}"
                     x-data="{ notiCount: parseInt('{{ $unreadNotiCount }}') || 0 }"
                     @update-noti-count.window="notiCount = parseInt($event.detail)"
@@ -144,19 +147,22 @@
                     </span>
                 </a>
 
-                <a href="#" class="relative flex items-center px-3 py-3 rounded-xl font-medium transition-all duration-300 group overflow-hidden text-gray-500 hover:bg-gray-50 hover:text-red-500 hover:translate-x-1">
-                    <i class="fa-solid fa-heart text-lg w-8 text-center transition-transform duration-300 group-hover:scale-110 group-hover:text-red-500"></i>
+                {{-- 6. Tin đã lưu --}}
+                <a href="{{ route('favorites.index') }}" class="relative flex items-center px-3 py-3 rounded-xl font-medium transition-all duration-300 group overflow-hidden {{ request()->routeIs('favorites.*') ? 'bg-red-50 text-red-500 shadow-sm' : 'text-gray-500 hover:bg-gray-50 hover:text-red-500 hover:translate-x-1' }}">
+                    <i class="fa-solid fa-heart text-lg w-8 text-center transition-transform duration-300 group-hover:scale-110 {{ request()->routeIs('favorites.*') ? 'text-red-500' : 'group-hover:text-red-500' }}"></i>
                     <span x-show="sidebarOpen" class="whitespace-nowrap transition-opacity">Tin đã lưu (Yêu thích)</span>
                 </a>
 
-                <a href="#" class="relative flex items-center px-3 py-3 rounded-xl font-medium transition-all duration-300 group overflow-hidden text-gray-500 hover:bg-gray-50 hover:text-yellow-500 hover:translate-x-1">
-                    <i class="fa-solid fa-star text-lg w-8 text-center transition-transform duration-300 group-hover:scale-110 group-hover:text-yellow-500"></i>
+                {{-- [ĐÃ FIX TRẢ LẠI MÀU VÀNG] 7. Đánh giá của tôi --}}
+                <a href="{{ route('reviews.index') }}" class="relative flex items-center px-3 py-3 rounded-xl font-medium transition-all duration-300 group overflow-hidden {{ request()->routeIs('reviews.*') ? 'bg-yellow-50 text-yellow-500 shadow-sm' : 'text-gray-500 hover:bg-gray-50 hover:text-yellow-500 hover:translate-x-1' }}">
+                    <i class="fa-solid fa-star text-lg w-8 text-center transition-transform duration-300 group-hover:scale-110 {{ request()->routeIs('reviews.*') ? 'text-yellow-500' : 'group-hover:text-yellow-500' }}"></i>
                     <span x-show="sidebarOpen" class="whitespace-nowrap transition-opacity">Đánh giá của tôi</span>
                 </a>
 
-                <a href="{{ route('profile.edit') }}" class="relative flex items-center px-3 py-3 rounded-xl font-medium transition-all duration-300 group overflow-hidden {{ request()->routeIs('profile.*') ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200/50' : 'text-gray-500 hover:bg-gray-50 hover:text-emerald-600 hover:translate-x-1' }}">
-                    <i class="fa-solid fa-user-gear text-lg w-8 text-center transition-transform duration-300 group-hover:rotate-45"></i>
-                    <span x-show="sidebarOpen" class="whitespace-nowrap transition-opacity">Cài đặt tài khoản</span>
+                {{-- 8. Ví 2HAND --}}
+                <a href="{{ route('wallet.index') }}" class="relative flex items-center px-3 py-3 rounded-xl font-medium transition-all duration-300 group overflow-hidden {{ request()->routeIs('wallet.*') ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200/50' : 'text-gray-500 hover:bg-gray-50 hover:text-emerald-600 hover:translate-x-1' }}">
+                    <i class="fa-solid fa-wallet text-lg w-8 text-center transition-transform duration-300 group-hover:scale-110"></i>
+                    <span x-show="sidebarOpen" class="whitespace-nowrap transition-opacity">Ví 2HAND</span>
                 </a>
 
                 {{-- KHOẢNG TRỐNG CHO ADMIN --}}
@@ -181,6 +187,17 @@
                 <a href="{{ route('admin.products.index') }}" class="relative flex items-center px-3 py-3 rounded-xl font-medium transition-all duration-300 group overflow-hidden {{ request()->routeIs('admin.products.*') ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-200/50' : 'text-gray-500 hover:bg-gray-50 hover:text-indigo-600 hover:translate-x-1' }}">
                     <i class="fa-solid fa-boxes-stacked text-lg w-8 text-center transition-transform duration-300 group-hover:scale-110"></i>
                     <span x-show="sidebarOpen" class="whitespace-nowrap transition-opacity">Quản lý Sản phẩm</span>
+                </a>
+
+                <a href="{{ route('admin.orders.index') }}" class="relative flex items-center px-3 py-3 rounded-xl font-medium transition-all duration-300 group overflow-hidden {{ request()->routeIs('admin.orders.*') ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-200/50' : 'text-gray-500 hover:bg-gray-50 hover:text-indigo-600 hover:translate-x-1' }}">
+                    <i class="fa-solid fa-file-invoice-dollar text-lg w-8 text-center transition-transform duration-300 group-hover:scale-110"></i>
+                    <span x-show="sidebarOpen" class="whitespace-nowrap transition-opacity">Quản lý Giao dịch</span>
+                </a>
+
+                {{-- [ĐÃ CHUYỂN VỊ TRÍ] Quản lý Báo cáo nằm trên Quản trị Tài chính --}}
+                <a href="{{ route('admin.reports.index') }}" class="relative flex items-center px-3 py-3 rounded-xl font-medium transition-all duration-300 group overflow-hidden {{ request()->routeIs('admin.reports.*') ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-200/50' : 'text-gray-500 hover:bg-gray-50 hover:text-indigo-600 hover:translate-x-1' }}">
+                    <i class="fa-solid fa-flag text-lg w-8 text-center transition-transform duration-300 group-hover:scale-110"></i>
+                    <span x-show="sidebarOpen" class="whitespace-nowrap transition-opacity">Quản lý Báo cáo</span>
                 </a>
 
                 <a href="{{ route('admin.wallet.index') }}" class="relative flex items-center px-3 py-3 rounded-xl font-medium transition-all duration-300 group overflow-hidden {{ request()->routeIs('admin.wallet.*') ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-200/50' : 'text-gray-500 hover:bg-gray-50 hover:text-indigo-600 hover:translate-x-1' }}">

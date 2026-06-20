@@ -26,6 +26,10 @@ class Product extends Model
         'view_count'
     ];
 
+    protected $casts = [
+        'reviewed_at' => 'datetime',
+    ];
+
     /**
      * Mối quan hệ: Một sản phẩm có nhiều hình ảnh đi kèm
      */
@@ -54,5 +58,11 @@ class Product extends Model
     public function reviewer()
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    // Một sản phẩm có thể được yêu thích bởi nhiều user
+    public function favoritedBy()
+    {
+        return $this->belongsToMany(User::class, 'favorites')->withTimestamps();
     }
 }

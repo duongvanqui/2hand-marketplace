@@ -153,4 +153,72 @@ class OrderController extends Controller
 
         return redirect()->back()->with('error', 'Thao tác không hợp lệ.');
     }
+
+    // NGƯỜI MUA: TỪ CHỐI NHẬN HÀNG (Hoàn hàng / Hoàn tiền)
+    public function rejectOrder(Request $request, $id)
+    {
+        $request->validate([
+            'reject_reason' => 'required|string|max:255',
+        ]);
+
+        $order = Order::where('id', $id)->where('buyer_id', Auth::id())->firstOrFail();
+
+        if ($order->status === 'shipped') {
+            DB::beginTransaction();
+            try {
+                // 1. Cập nhật trạng thái đơn thành từ chối
+                $order->update([
+                    'status' => 'rejected',
+                    // 'cancel_reason' => $request->reject_reason // Nếu DB của bạn có cột cancel_reason thì mở comment dòng này
+                ]);
+
+                // 2. Mở khóa sản phẩm để người bán tiếp tục bán
+                if ($order->product) {
+                    $order->product->update(['status' => 'approved']);
+                }
+
+                // 3. Hoàn tiền cho NGƯỜI MUA nếu đã thanh toán qua ví (không phải COD)
+                $refundMessage = '';
+                if ($order->payment_method !== 'cod') {
+                    $buyer = \App\Models\User::find($order->buyer_id);
+                    if ($buyer) {
+                        $buyer->increment('balance', $order->total_amount);
+                        $refundMessage = ' Số tiền ' . number_format($order->total_amount) . 'đ đã được hoàn lại vào ví của bạn.';
+                    }
+                }
+
+                // 4. Bắn thông báo cho NGƯỜI BÁN
+                $seller = \App\Models\User::find($order->seller_id);
+                if ($seller) {
+                    $seller->notify(new \App\Notifications\SystemNotification([
+                        'type'    => 'danger', // Màu đỏ cảnh báo
+                        'icon'    => 'fa-triangle-exclamation',
+                        'title'   => 'Đơn hàng bị từ chối!',
+                        'message' => 'Người mua đã từ chối nhận hàng cho đơn <span class="font-bold">#DH' . $order->id . '</span>. <br><b>Lý do:</b> ' . $request->reject_reason . '.<br>Sản phẩm đã được mở bán lại trên hệ thống.',
+                        'url'     => route('orders.index'),
+                    ]));
+                }
+
+                // 5. Bắn thông báo cho NGƯỜI MUA
+                $buyerNotify = \App\Models\User::find($order->buyer_id);
+                if ($buyerNotify) {
+                    $buyerNotify->notify(new \App\Notifications\SystemNotification([
+                        'type'    => 'warning', // Màu vàng
+                        'icon'    => 'fa-rotate-left',
+                        'title'   => 'Đã từ chối nhận hàng',
+                        'message' => 'Bạn đã từ chối đơn hàng <span class="font-bold">#DH' . $order->id . '</span> thành công.' . $refundMessage,
+                        'url'     => route('orders.index'),
+                    ]));
+                }
+
+                DB::commit();
+                return redirect()->back()->with('success', 'Đã từ chối nhận hàng.' . $refundMessage);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                return redirect()->back()->with('error', 'Lỗi hệ thống: ' . $e->getMessage());
+            }
+        }
+
+        return redirect()->back()->with('error', 'Thao tác không hợp lệ.');
+    }
 }

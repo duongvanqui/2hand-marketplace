@@ -8,6 +8,7 @@ use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -20,39 +21,33 @@ class ProductController extends Controller
         $query = Product::where('status', 'approved')->with(['images', 'category']);
 
         // [1] Lọc theo Từ khóa Tìm kiếm
-       if ($request->filled('search')) {
+        if ($request->filled('search')) {
             $searchTerm = $request->input('search');
             $query->where(function($q) use ($searchTerm) {
-                // 1. Tìm trong tên sản phẩm
                 $q->where('title', 'LIKE', '%' . $searchTerm . '%')
-                  // 2. Hoặc tìm trong mô tả
                   ->orWhere('description', 'LIKE', '%' . $searchTerm . '%')
-                  // 3. Hoặc tìm xem tên Danh mục có chứa từ khóa này không (Cực kỳ quan trọng)
                   ->orWhereHas('category', function($catQuery) use ($searchTerm) {
                       $catQuery->where('name', 'LIKE', '%' . $searchTerm . '%');
                   });
             });
         }
 
-        // [2] Lọc theo Danh mục (Đã fix lỗi Cha - Con)
+        // [2] Lọc theo Danh mục
         if ($request->filled('category_id')) {
             $categoryId = $request->input('category_id');
             
-            // Tìm chính ID đó VÀ tất cả ID của các danh mục con thuộc về nó
             $categoryIds = Category::where('id', $categoryId)
                                    ->orWhere('parent_id', $categoryId)
                                    ->pluck('id');
             
-            // Lọc sản phẩm nằm trong mảng ID vừa tìm được
             $query->whereIn('category_id', $categoryIds);
         }
 
-        // Sắp xếp ưu tiên các tin đang được "Đẩy lên" (pushed_until còn hạn), sau đó mới tới ngày đăng mới nhất
+        // Sắp xếp ưu tiên các tin đang được "Đẩy lên"
         $products = $query->orderByRaw('pushed_until > NOW() DESC')
                           ->latest()
                           ->paginate(12);
 
-        // Lấy danh mục gốc để hiển thị ra các ô "Khám phá danh mục" trên trang chủ
         $rootCategories = Category::whereNull('parent_id')->get();
 
         return view('products.index', compact('products', 'rootCategories'));
@@ -68,7 +63,7 @@ class ProductController extends Controller
     }
 
     /**
-     * 3. Xử lý lưu thông tin khi người dùng nhấn nút "ĐĂNG TIN NGAY" (Store)
+     * 3. Xử lý lưu thông tin khi đăng tin mới (Store)
      */
     public function store(Request $request)
     {
@@ -81,7 +76,7 @@ class ProductController extends Controller
             'specifications' => 'nullable|string',
             'location' => 'required',
             'images' => 'required|array|min:1|max:10',
-            'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:2048', 
+            'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:5120', // Nâng lên 5MB cho thoải mái
         ]);
 
         $product = Product::create([
@@ -98,12 +93,15 @@ class ProductController extends Controller
             'status' => 'pending', 
         ]);
 
+        // Cập nhật is_main dựa theo lựa chọn cover_image_index từ form
+        $coverIndex = $request->input('cover_image_index', 0);
+
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $index => $file) {
                 $path = $file->store('products', 'public');
                 $product->images()->create([
                     'image_path' => $path,
-                    'is_main' => ($index === 0) ? 1 : 0,
+                    'is_main' => ($index == $coverIndex) ? 1 : 0,
                 ]);
             }
         }
@@ -139,5 +137,151 @@ class ProductController extends Controller
         $totalRejected = Product::where('user_id', $user->id)->where('status', 'rejected')->count();
 
         return view('dashboard', compact('products', 'totalApproved', 'totalViews', 'totalRejected'));
+    }
+
+    /**
+     * 6. Quản lý Sản phẩm của tôi
+     */
+    public function myProducts(\Illuminate\Http\Request $request)
+    {
+        $userId = \Illuminate\Support\Facades\Auth::id();
+
+        // 1. TÁCH RIÊNG TỪNG TRẠNG THÁI ĐỂ ĐẾM CHÍNH XÁC
+        $totalProducts = \App\Models\Product::where('user_id', $userId)->count();
+        $activeProducts = \App\Models\Product::where('user_id', $userId)->where('status', 'approved')->count();
+        $pendingProducts = \App\Models\Product::where('user_id', $userId)->where('status', 'pending')->count();
+        $soldProducts = \App\Models\Product::where('user_id', $userId)->where('status', 'sold')->count();
+        $rejectedProducts = \App\Models\Product::where('user_id', $userId)->where('status', 'rejected')->count();
+
+        // 2. Xử lý bộ lọc và tìm kiếm
+        $query = \App\Models\Product::where('user_id', $userId)->with('category');
+
+        if ($request->has('search') && $request->search != '') {
+            $query->where('title', 'like', '%' . $request->search . '%');
+        }
+
+        if ($request->has('status') && $request->status != '') {
+            $query->where('status', $request->status);
+        }
+
+        // 3. Phân trang kết quả
+        $products = $query->latest()->paginate(10);
+
+        // Đừng quên truyền biến $soldProducts và $rejectedProducts xuống View nhé
+        return view('products.my_products', compact(
+            'products', 'totalProducts', 'activeProducts', 'pendingProducts', 'soldProducts', 'rejectedProducts'
+        ));
+    }
+
+    /**
+     * 7. Hiển thị form sửa tin (Edit)
+     */
+    public function edit($id)
+    {
+        $product = Product::where('id', $id)
+                          ->where('user_id', Auth::id())
+                          ->firstOrFail();
+
+        // BẢO MẬT: Chặn không cho sửa nếu sản phẩm đã bán
+        if ($product->status === 'sold') {
+            return redirect()->route('my.products')->with('error', 'Sản phẩm đã bán không thể chỉnh sửa.');
+        }
+
+        // Lấy danh mục Cha kèm Con để đổ vào Select Box
+        $categories = Category::whereNull('parent_id')->with('children')->get(); 
+
+        return view('products.edit', compact('product', 'categories'));
+    }
+
+    /**
+     * 8. Xử lý lưu dữ liệu khi nhấn Cập nhật (Update)
+     */
+    public function update(Request $request, $id)
+    {
+        $product = Product::where('id', $id)
+                          ->where('user_id', Auth::id())
+                          ->firstOrFail();
+
+        // BẢO MẬT: Chặn nếu dùng postman cố tình đẩy request khi sp đã bán
+        if ($product->status === 'sold') {
+            return redirect()->route('my.products')->with('error', 'Sản phẩm đã bán không thể chỉnh sửa.');
+        }
+
+        $request->validate([
+            'title' => 'required|max:150',
+            'category_id' => 'required',
+            'price' => 'required|numeric',
+            'condition_pct' => 'required|integer|between:1,100',
+            'description' => 'required',
+            'specifications' => 'nullable|string',
+            'location' => 'required',
+            'new_images.*' => 'image|mimes:jpeg,png,jpg,webp|max:5120',
+        ]);
+
+        // Cập nhật thông tin text
+        $product->update([
+            'title' => $request->title,
+            'category_id' => $request->category_id,
+            'price' => $request->price,
+            'condition_pct' => $request->condition_pct,
+            'description' => $request->description,
+            'specifications' => $request->specifications,
+            'location' => $request->location,
+            'status' => 'pending', // Đưa về trạng thái chờ duyệt
+        ]);
+
+        // XỬ LÝ ẢNH
+        
+        // 1. Xóa ảnh cũ nếu người dùng bấm nút xóa
+        if ($request->has('deleted_images')) {
+            $deletedIds = $request->input('deleted_images');
+            $imagesToDelete = $product->images()->whereIn('id', $deletedIds)->get();
+            
+            foreach ($imagesToDelete as $img) {
+                // Xóa file vật lý trong storage
+                if (Storage::disk('public')->exists($img->image_path)) {
+                    Storage::disk('public')->delete($img->image_path);
+                }
+                // Xóa record trong DB
+                $img->delete();
+            }
+        }
+
+        // 2. Thêm ảnh mới (Nếu có)
+        $newUploadedImageIds = [];
+        if ($request->hasFile('new_images')) {
+            foreach ($request->file('new_images') as $file) {
+                $path = $file->store('products', 'public');
+                $newImg = $product->images()->create([
+                    'image_path' => $path,
+                    'is_main' => 0 // Tạm gán bằng 0
+                ]);
+                $newUploadedImageIds[] = $newImg->id; // Lưu lại ID để tí nữa set ảnh bìa
+            }
+        }
+
+        // 3. Xử lý cài đặt Ảnh bìa (is_main)
+        // Reset tất cả ảnh về 0
+        $product->images()->update(['is_main' => 0]);
+
+        if ($request->filled('cover_image_id')) {
+            // Trường hợp 1: Người dùng chọn 1 trong các ảnh cũ làm ảnh bìa
+            $product->images()->where('id', $request->input('cover_image_id'))->update(['is_main' => 1]);
+            
+        } elseif ($request->filled('cover_new_index')) {
+            // Trường hợp 2: Người dùng chọn 1 ảnh MỚI TẢI LÊN làm ảnh bìa
+            $coverIndex = $request->input('cover_new_index');
+            if (isset($newUploadedImageIds[$coverIndex])) {
+                $product->images()->where('id', $newUploadedImageIds[$coverIndex])->update(['is_main' => 1]);
+            }
+        } else {
+            // Trường hợp 3 (Dự phòng): Không chọn gì, hoặc xóa lỡ tay -> Lấy cái ảnh đầu tiên còn sót lại làm bìa
+            $firstImg = $product->images()->first();
+            if ($firstImg) {
+                $firstImg->update(['is_main' => 1]);
+            }
+        }
+
+        return redirect()->route('my.products')->with('success', 'Đã cập nhật tin đăng thành công. Vui lòng chờ Quản trị viên duyệt lại!');
     }
 }

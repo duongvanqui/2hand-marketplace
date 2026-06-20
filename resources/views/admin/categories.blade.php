@@ -8,7 +8,14 @@
     <span class="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
         Quản lý danh mục
     </span>
-    <p class="text-sm text-gray-500 font-medium mt-1">Trang chủ <i class="fa-solid fa-angle-right text-[10px] mx-1"></i> Cấu hình <i class="fa-solid fa-angle-right text-[10px] mx-1"></i> Danh mục</p>
+    <p class="text-sm text-gray-500 font-medium mt-1 flex items-center">
+        {{-- Link về Trang chủ --}}
+        <a href="{{ route('admin.dashboard') ?? url('/admin') }}" class="hover:text-blue-600 transition-colors">Trang chủ</a> 
+        <i class="fa-solid fa-angle-right text-[10px] mx-2"></i> 
+        
+        {{-- Trang hiện tại thì in đậm và không cần link --}}
+        <span class="text-gray-900 font-bold">Danh mục</span>
+    </p>
 </div>
 @endsection
 
@@ -79,25 +86,30 @@
     <div class="bg-white p-4 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
         
         {{-- Tìm kiếm Form --}}
-        <form action="{{ route('admin.categories.index') }}" method="GET" class="flex items-center gap-3 w-full md:w-1/2">
-            <div class="relative w-full">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                </div>
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="Tìm kiếm tên danh mục..." class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50 transition-all font-medium">
+        <form action="{{ route('admin.categories.index') }}" method="GET" class="flex flex-wrap md:flex-nowrap items-center gap-3 w-full md:w-auto">
+            <div class="relative w-full md:w-80">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Tìm kiếm tên danh mục..." class="w-full pl-11 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all font-medium">
             </div>
-            <button type="submit" class="hidden"></button>
-            @if(request('search'))
-                <a href="{{ route('admin.categories.index') }}" class="px-4 py-2.5 bg-red-50 text-red-600 text-sm font-bold rounded-xl hover:bg-red-100 transition shadow-sm border border-red-100 whitespace-nowrap">
-                    <i class="fa-solid fa-xmark mr-1"></i> Xóa lọc
-                </a>
-            @endif
+            
+            <div class="flex items-center gap-2 w-full md:w-auto">
+                <button type="submit" class="px-5 py-2 bg-gray-800 hover:bg-gray-900 text-white text-sm font-bold rounded-xl transition-colors shadow-sm whitespace-nowrap">
+                    Tìm
+                </button>
+                @if(request('search'))
+                    <a href="{{ route('admin.categories.index') }}" class="px-4 py-2 bg-red-50 text-red-600 text-sm font-bold rounded-xl hover:bg-red-100 transition shadow-sm border border-red-100 whitespace-nowrap">
+                        <i class="fa-solid fa-xmark mr-1"></i> Xóa
+                    </a>
+                @endif
+            </div>
         </form>
 
-        {{-- Nút Thêm Mới --}}
-        <button onclick="openModal('modal-add-category')" class="w-full md:w-auto px-6 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition shadow-md shadow-blue-200 flex items-center justify-center gap-2 transform hover:-translate-y-0.5">
-            <i class="fa-solid fa-plus"></i> Thêm danh mục
-        </button>
+        {{-- Nhóm Phải: Nút Thêm mới --}}
+        <div class="flex items-center w-full md:w-auto justify-end">
+            <button onclick="openModal('modal-add-category')" class="px-5 py-2 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition shadow-md shadow-blue-200 flex items-center gap-2 transform hover:-translate-y-0.5 whitespace-nowrap">
+                <i class="fa-solid fa-plus"></i> Thêm danh mục
+            </button>
+        </div>
     </div>
 
     {{-- ========================================== --}}

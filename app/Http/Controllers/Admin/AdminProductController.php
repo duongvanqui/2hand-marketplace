@@ -26,7 +26,7 @@ class AdminProductController extends Controller
         if ($search = $request->search) {
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
-                  ->orWhereHas('user', fn($u) => $u->where('name', 'like', "%{$search}%"));
+                    ->orWhereHas('user', fn($u) => $u->where('name', 'like', "%{$search}%"));
             });
         }
 
@@ -64,11 +64,17 @@ class AdminProductController extends Controller
     }
 
     // ----------------------------------------------------------------
-    // APPROVE — Duyệt tin
+    // APPROVE — Duyệt tin (Đã fix lỗi duyệt trùng)
     // ----------------------------------------------------------------
     public function approve($id)
     {
         $product = Product::findOrFail($id);
+
+        // Chốt chặn an toàn: Nếu tin đã duyệt rồi thì không xử lý nữa
+        if ($product->status === 'approved') {
+            return back()->with('error', 'Sản phẩm này đã được duyệt trước đó!');
+        }
+
         $product->update([
             'status'           => 'approved',
             'rejection_reason' => null,
@@ -76,13 +82,10 @@ class AdminProductController extends Controller
             'reviewed_at'      => now(),
         ]);
 
-        // Đã XÓA dòng $this->notify cũ ở đây
-
-        // CHỈ SỬ DỤNG HỆ THỐNG THÔNG BÁO MỚI (CHUẨN UX/UI)
         $owner = User::find($product->user_id);
         if ($owner) {
             $owner->notify(new SystemNotification([
-                'type'    => 'success', 
+                'type'    => 'success',
                 'icon'    => 'fa-check',
                 'title'   => 'Tin đăng được duyệt',
                 'message' => 'Sản phẩm <span class="font-bold text-gray-900">"' . $product->title . '"</span> của bạn đã được phê duyệt và hiển thị công khai.',
@@ -94,7 +97,7 @@ class AdminProductController extends Controller
     }
 
     // ----------------------------------------------------------------
-    // REJECT — Từ chối tin kèm lý do
+    // REJECT — Từ chối tin kèm lý do (Đã fix lỗi từ chối trùng)
     // ----------------------------------------------------------------
     public function reject(Request $request, $id)
     {
@@ -105,6 +108,12 @@ class AdminProductController extends Controller
         ]);
 
         $product = Product::findOrFail($id);
+
+        // Chốt chặn an toàn: Nếu tin đã bị từ chối rồi thì không xử lý lại
+        if ($product->status === 'rejected') {
+            return back()->with('error', 'Sản phẩm này đã bị từ chối trước đó!');
+        }
+
         $product->update([
             'status'           => 'rejected',
             'rejection_reason' => $request->rejection_reason,
@@ -112,17 +121,14 @@ class AdminProductController extends Controller
             'reviewed_at'      => now(),
         ]);
 
-        // Đã XÓA dòng $this->notify cũ ở đây
-
-        // CHỈ SỬ DỤNG HỆ THỐNG THÔNG BÁO MỚI KÈM LÝ DO TỪ CHỐI
         $owner = User::find($product->user_id);
         if ($owner) {
             $owner->notify(new SystemNotification([
-                'type'    => 'danger', 
+                'type'    => 'danger',
                 'icon'    => 'fa-xmark',
                 'title'   => 'Tin đăng bị từ chối',
                 'message' => 'Sản phẩm <span class="font-bold text-gray-900">"' . $product->title . '"</span> bị từ chối. Lý do: <span class="text-red-600 font-medium">' . $request->rejection_reason . '</span>',
-                'url'     => route('dashboard'), // Hoặc trỏ về trang quản lý bài đăng của user
+                'url'     => route('dashboard'),
             ]));
         }
 
@@ -138,23 +144,45 @@ class AdminProductController extends Controller
         $product->status = ($product->status === 'hidden') ? 'approved' : 'hidden';
         $product->save();
 
-        return back()->with('success', 'Đã cập nhật trạng thái!');
+        return back()->with('success', 'Đã cập nhật trạng thái sản phẩm!');
     }
 
     // ----------------------------------------------------------------
-    // PUSH TIN — Đẩy tin lên đầu
+    // PUSH TIN — Đẩy tin lên đầu (Đã fix lỗi chặn trạng thái)
     // ----------------------------------------------------------------
     public function pushTin(Request $request, $id)
     {
+        $request->validate([
+            'days' => 'nullable|integer|min:1|max:30'
+        ]);
+
         $product = Product::findOrFail($id);
-        $days    = $request->input('days', 3);
+
+        // Chốt chặn: Chỉ đẩy tin khi sản phẩm đang được hiển thị công khai (đã duyệt)
+        if ($product->status !== 'approved') {
+            return back()->with('error', 'Chỉ có thể đẩy những tin đã được duyệt và đang hoạt động!');
+        }
+
+        $days = (int) $request->input('days', 3);
         $product->update(['pushed_until' => now()->addDays($days)]);
+
+        // Gửi thông báo cho người dùng
+        $owner = User::find($product->user_id);
+        if ($owner) {
+            $owner->notify(new SystemNotification([
+                'type'    => 'info',
+                'icon'    => 'fa-arrow-up-right-dots',
+                'title'   => 'Tin đăng được đẩy lên TOP',
+                'message' => 'Sản phẩm <span class="font-bold">"' . $product->title . '"</span> của bạn đã được Admin đẩy lên trang đầu trong ' . $days . ' ngày.',
+                'url'     => route('products.show', $product->slug),
+            ]));
+        }
 
         return back()->with('success', "Đã đẩy tin \"{$product->title}\" lên đầu trong {$days} ngày.");
     }
 
     // ----------------------------------------------------------------
-    // DESTROY — Xóa tin
+    // DESTROY — Xóa vĩnh viễn tin
     // ----------------------------------------------------------------
     public function destroy($id)
     {
@@ -162,8 +190,89 @@ class AdminProductController extends Controller
         $title   = $product->title;
         $product->delete();
 
-        return back()->with('success', "Đã xóa tin \"{$title}\".");
+        return back()->with('success', "Đã xóa vĩnh viễn tin \"{$title}\".");
     }
-    
-    // ĐÃ XÓA HOÀN TOÀN hàm private function notify() vì không còn cần thiết.
+
+    // ----------------------------------------------------------------
+    // BULK ACTION — Xử lý hàng loạt (Đã fix vòng lặp gửi thông báo)
+    // ----------------------------------------------------------------
+    public function bulkAction(Request $request)
+    {
+        $request->validate([
+            'product_ids' => 'required|string',
+            'action'      => 'required|in:approve,reject,delete'
+        ]);
+
+        $ids = explode(',', $request->product_ids);
+
+        // Lấy danh sách sản phẩm để chạy logic thông báo từng người
+        $products = Product::whereIn('id', $ids)->get();
+        $count = $products->count();
+
+        if ($count === 0) {
+            return back()->with('error', 'Không tìm thấy sản phẩm nào để xử lý.');
+        }
+
+        switch ($request->action) {
+            case 'approve':
+                foreach ($products as $product) {
+                    if ($product->status !== 'approved') {
+                        $product->update([
+                            'status'           => 'approved',
+                            'rejection_reason' => null,
+                            'reviewed_by'      => Auth::id(),
+                            'reviewed_at'      => now(),
+                        ]);
+
+                        $owner = User::find($product->user_id);
+                        if ($owner) {
+                            $owner->notify(new SystemNotification([
+                                'type'    => 'success',
+                                'icon'    => 'fa-check',
+                                'title'   => 'Tin đăng được duyệt',
+                                'message' => 'Sản phẩm <span class="font-bold">"' . $product->title . '"</span> đã được phê duyệt.',
+                                'url'     => route('products.show', $product->slug),
+                            ]));
+                        }
+                    }
+                }
+                $message = "Đã duyệt hiển thị thành công {$count} sản phẩm!";
+                break;
+
+            case 'reject':
+                foreach ($products as $product) {
+                    if ($product->status !== 'rejected') {
+                        $product->update([
+                            'status'           => 'rejected',
+                            'rejection_reason' => 'Từ chối do vi phạm (Xử lý hàng loạt bởi Admin)',
+                            'reviewed_by'      => Auth::id(),
+                            'reviewed_at'      => now(),
+                        ]);
+
+                        $owner = User::find($product->user_id);
+                        if ($owner) {
+                            $owner->notify(new SystemNotification([
+                                'type'    => 'danger',
+                                'icon'    => 'fa-xmark',
+                                'title'   => 'Tin đăng bị từ chối',
+                                'message' => 'Sản phẩm <span class="font-bold">"' . $product->title . '"</span> bị từ chối do vi phạm quy định sàn.',
+                                'url'     => route('dashboard'),
+                            ]));
+                        }
+                    }
+                }
+                $message = "Đã từ chối/ẩn {$count} sản phẩm được chọn!";
+                break;
+
+            case 'delete':
+                Product::whereIn('id', $ids)->delete();
+                $message = "Đã xóa vĩnh viễn {$count} sản phẩm!";
+                break;
+
+            default:
+                $message = "Đã xử lý thành công!";
+        }
+
+        return redirect()->back()->with('success', $message);
+    }
 }

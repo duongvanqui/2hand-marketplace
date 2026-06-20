@@ -44,6 +44,7 @@ class AdminUserController extends Controller
             'role'     => 'required|string|in:user,admin',
             'status'   => 'required|in:0,1',
             'phone'    => 'nullable|string|max:20',
+            'address'  => 'nullable|string|max:255',
         ]);
 
         User::create([
@@ -53,6 +54,7 @@ class AdminUserController extends Controller
             'password' => Hash::make($request->password),
             'role'     => $request->role,
             'status'   => $request->status,
+            'address'  => $request->address,
         ]);
 
         return redirect()->back()->with('success', 'Thêm tài khoản mới thành công!');
@@ -69,11 +71,13 @@ class AdminUserController extends Controller
             'role'     => 'required|string|in:user,admin',
             'status'   => 'required|in:0,1',
             'phone'    => 'nullable|string|max:20',
+            'address'  => 'nullable|string|max:255',
         ]);
 
         $user->name = $request->name;
         $user->email = $request->email;
         $user->phone = $request->phone;
+        $user->address = $request->address;
         $user->role = $request->role;
         $user->status = $request->status;
 
@@ -82,16 +86,37 @@ class AdminUserController extends Controller
         }
 
         $user->save();
-        return redirect()->back()->with('success', 'Cập nhật thông tin tài khoản thành công!');
+
+        // Xử lý đồng bộ trạng thái sản phẩm theo trạng thái User
+        if ($user->status == 0) {
+            $user->products()->update(['status' => 0]);
+            return redirect()->back()->with('success', 'Cập nhật và khóa toàn bộ sản phẩm của tài khoản thành công!');
+        } else {
+            // Nếu update thành Hoạt động (1), khôi phục luôn sản phẩm
+            $user->products()->update(['status' => 1]);
+            return redirect()->back()->with('success', 'Cập nhật thông tin tài khoản thành công!');
+        }
     }
 
     public function toggleStatus($id)
     {
         $user = User::findOrFail($id);
+        
+        // Đảo ngược trạng thái hiện tại (0 thành 1, 1 thành 0)
         $user->status = $user->status == 1 ? 0 : 1;
         $user->save();
 
-        return redirect()->back()->with('success', 'Thay đổi trạng thái tài khoản thành công!');
+        if ($user->status == 0) {
+            // Khi bị khóa -> Ẩn toàn bộ sản phẩm (đưa về 0)
+            $user->products()->update(['status' => 0]); 
+            $message = 'Đã khóa tài khoản và ẨN toàn bộ sản phẩm của người dùng này!';
+        } else {
+            // THIẾU ĐOẠN NÀY: Khi mở khóa -> Khôi phục toàn bộ sản phẩm (đưa về 1)
+            $user->products()->update(['status' => 1]); 
+            $message = 'Đã mở khóa tài khoản và KHÔI PHỤC sản phẩm thành công!';
+        }
+
+        return redirect()->back()->with('success', $message);
     }
 
     public function destroy($id)

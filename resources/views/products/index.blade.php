@@ -32,14 +32,12 @@
     @endif
 
     {{-- ===== KHÁM PHÁ DANH MỤC ===== --}}
-    {{-- Chỉ hiển thị khi KHÔNG có tham số tìm kiếm hoặc lọc danh mục --}}
     @if(!request()->hasAny(['search', 'category_id']))
     <div class="mb-10">
         <h2 class="text-xl font-bold text-gray-800 mb-4">Khám phá danh mục</h2>
         <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
             
             @php
-                // Đã cập nhật khớp 100% với tên danh mục trong Database của bạn
                 $iconMap = [
                     'Đồ điện tử' => 'fa-desktop',
                     'Xe cộ' => 'fa-motorcycle',
@@ -52,7 +50,6 @@
                 ];
             @endphp
 
-            {{-- Hàm take(6) giúp chỉ lấy tối đa 6 danh mục đầu tiên --}}
             @foreach($rootCategories->take(6) as $cat)
                 @php $icon = $iconMap[$cat->name] ?? 'fa-box-open'; @endphp
                 
@@ -74,7 +71,6 @@
             <h2 class="text-xl font-bold text-gray-800 flex items-center gap-3">
                 @if(request()->hasAny(['search', 'category_id']))
                     <span>Kết quả tìm kiếm</span>
-                    {{-- Nút hủy lọc --}}
                     <a href="{{ url('/') }}" class="text-xs font-medium bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-500 px-3 py-1.5 rounded-lg transition-colors flex items-center">
                         <i class="fa-solid fa-xmark mr-1"></i> Hủy lọc
                     </a>
@@ -108,8 +104,12 @@
                     </div>
                 @endif
 
-                <button class="absolute top-2 right-2 z-10 w-8 h-8 bg-white/80 backdrop-blur rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 transition shadow-sm">
-                    <i class="fa-regular fa-heart"></i>
+                {{-- Nút Thả Tim (Đã sửa lại class cho icon để JS có thể nhận diện và đổi màu) --}}
+                @php
+                    $isFavorited = Auth::check() ? Auth::user()->favorites->contains($product->id) : false;
+                @endphp
+                <button onclick="toggleFavorite({{ $product->id }}, this)" type="button" class="absolute top-2 right-2 z-10 w-8 h-8 bg-white/80 backdrop-blur rounded-full flex items-center justify-center shadow-sm hover:scale-110 transition-transform outline-none">
+                    <i class="{{ $isFavorited ? 'fa-solid text-red-500' : 'fa-regular text-gray-400' }} fa-heart text-lg transition-colors duration-300"></i>
                 </button>
 
                 <a href="{{ route('products.show', $product->slug) }}" class="block">
@@ -145,7 +145,6 @@
         </div>
 
         <div class="mt-8">
-            {{-- Giữ nguyên tham số tìm kiếm khi sang trang 2, 3... --}}
             {{ $products->appends(request()->query())->links() }}
         </div>
         @endif

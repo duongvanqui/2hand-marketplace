@@ -1,6 +1,7 @@
 @auth
 @if(!request()->routeIs('chat.index'))
 @php
+    // Lọc sạch chat rỗng
     $myConversations = \App\Models\Conversation::where(function($q) {
             $q->where('buyer_id', Auth::id())
               ->orWhere('seller_id', Auth::id());
@@ -11,245 +12,64 @@
         ->get();
 @endphp
 
-<div x-data="{
-    isChatOpen: false,
-    activeConv: null,
-    text: '',
-    imageFile: null,
-    imagePreview: null,
-    myId: {{ auth()->id() }},
-    partnerName: 'Hộp thư tin nhắn',
-
-    initChat(convId) {
-        this.isChatOpen = true;
-        
-        // Tắt chấm đỏ ở Navbar
-        const dot = document.getElementById('chat-notification-dot');
-        if(dot) dot.classList.add('hidden');
-        
-        if(!convId || this.activeConv === convId) return;
-        this.activeConv = convId;
-        
-        const box = document.getElementById('global-chat-box');
-        box.innerHTML = `<div class='text-center text-xs text-gray-400 mt-10'><i class='fa-solid fa-spinner fa-spin text-2xl mb-2'></i><br>Đang tải tin nhắn...</div>`;
-
-        // Làm mới màu sắc danh sách
-        document.querySelectorAll('.global-conv-item').forEach(el => {
-            el.classList.remove('bg-emerald-50');
-            const bar = el.querySelector('.active-bar');
-            if(bar) bar.classList.replace('scale-y-100', 'scale-y-0');
-        });
-        
-        // Tô màu mục đang chọn
-        const activeItem = document.getElementById('gconv-' + convId);
-        if(activeItem) {
-            activeItem.classList.add('bg-emerald-50');
-            const activeBar = activeItem.querySelector('.active-bar');
-            if(activeBar) activeBar.classList.replace('scale-y-0', 'scale-y-100');
-            this.partnerName = activeItem.getAttribute('data-name');
-        }
-
-        // Tự động ẩn huy hiệu đỏ của cuộc trò chuyện này
-        const badge = document.getElementById('floating-unread-badge-' + convId);
-        if(badge) badge.style.display = 'none';
-
-        // Tải dữ liệu tin nhắn
-        fetch(`/chat/${convId}/messages`)
-            .then(res => res.json())
-            .then(messages => {
-                box.innerHTML = `<div class='text-center my-4'><span class='text-[10px] font-bold text-gray-400 bg-gray-100 px-3 py-1 rounded-full uppercase tracking-wider border border-gray-200 shadow-inner'>Bắt đầu cuộc trò chuyện</span></div>`;
-                messages.forEach(msg => this.appendMsg(msg, msg.sender_id === this.myId));
-                
-                setTimeout(() => { if(window.syncUnreadCount) window.syncUnreadCount(); }, 500);
-
-                if (window.Echo) {
-                    window.Echo.private(`chat.${convId}`)
-                        .listen('.message.sent', (e) => {
-                            if (e.message.sender_id !== this.myId) {
-                                this.appendMsg(e.message, false);
-                            }
-                        });
-                }
-            })
-            .catch(err => {
-                box.innerHTML = `<div class='text-center text-red-500 mt-10'>Lỗi tải tin nhắn!</div>`;
-            });
-    },
-
-    openDirect(data) {
-        this.isChatOpen = true;
-        this.activeConv = data.convId;
-        this.partnerName = data.partnerName;
-        
-        const dot = document.getElementById('chat-notification-dot');
-        if(dot) dot.classList.add('hidden');
-
-        const box = document.getElementById('global-chat-box');
-        box.innerHTML = `<div class='text-center text-xs text-gray-400 mt-10'><i class='fa-solid fa-spinner fa-spin text-2xl mb-2'></i><br>Đang chuẩn bị phòng chat...</div>`;
-
-        document.querySelectorAll('.global-conv-item').forEach(el => {
-            el.classList.remove('bg-emerald-50');
-            if(el.querySelector('.active-bar')) el.querySelector('.active-bar').classList.replace('scale-y-100', 'scale-y-0');
-        });
-        
-        const activeItem = document.getElementById('gconv-' + data.convId);
-        if(activeItem) {
-            activeItem.classList.add('bg-emerald-50');
-            activeItem.querySelector('.active-bar').classList.replace('scale-y-0', 'scale-y-100');
-        }
-
-        const badge = document.getElementById('floating-unread-badge-' + data.convId);
-        if(badge) badge.style.display = 'none';
-
-        fetch(`/chat/${data.convId}/messages`)
-            .then(res => res.json())
-            .then(messages => {
-                box.innerHTML = `<div class='text-center my-4'><span class='text-[10px] font-bold text-gray-400 bg-gray-100 px-3 py-1 rounded-full uppercase tracking-wider border border-gray-200 shadow-inner'>Hãy gửi lời chào đến người bán</span></div>`;
-                messages.forEach(msg => this.appendMsg(msg, msg.sender_id === this.myId));
-
-                setTimeout(() => { if(window.syncUnreadCount) window.syncUnreadCount(); }, 500);
-
-                if (window.Echo) {
-                    window.Echo.private(`chat.${data.convId}`)
-                        .listen('.message.sent', (e) => {
-                            if (e.message.sender_id !== this.myId) {
-                                this.appendMsg(e.message, false);
-                            }
-                        });
-                }
-            });
-    },
-
-    appendMsg(msg, isMe) {
-        const box = document.getElementById('global-chat-box');
-        const alignWrapper = isMe ? 'flex justify-end' : 'flex justify-start';
-        const bubbleClass = isMe ? 'bg-gradient-to-br from-emerald-500 to-green-600 text-white rounded-2xl rounded-tr-sm shadow-md' : 'bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-tl-sm shadow-sm';
-        
-        let contentHTML = '';
-        if (msg.image_path && msg.image_path.startsWith('data:image')) {
-            contentHTML += `<img src='${msg.image_path}' class='rounded-xl mb-1 max-w-[150px] object-cover border border-black/5'>`;
-        } else if (msg.image_path) {
-            contentHTML += `<a href='/storage/${msg.image_path}' target='_blank'><img src='/storage/${msg.image_path}' class='rounded-xl mb-1 max-w-[150px] object-cover border border-black/5 hover:opacity-90'></a>`;
-        }
-        if (msg.message) {
-            contentHTML += `<p class='text-[13px] leading-relaxed'>${msg.message.replace(/\n/g, '<br>')}</p>`;
-        }
-
-        box.insertAdjacentHTML('beforeend', `
-            <div class='${alignWrapper} mt-1.5 animate-fade-in-up'>
-                <div class='max-w-[80%] px-3.5 py-2 ${bubbleClass}'>${contentHTML}</div>
-            </div>
-        `);
-        box.scrollTop = box.scrollHeight;
-    },
-
-    handleImageSelect(event) {
-        const file = event.target.files[0];
-        if(file) {
-            this.imageFile = file;
-            const reader = new FileReader();
-            reader.onload = (e) => { this.imagePreview = e.target.result; };
-            reader.readAsDataURL(file);
-        }
-    },
-
-    removeImage() {
-        this.imageFile = null;
-        this.imagePreview = null;
-        document.getElementById('global-image-input').value = '';
-    },
-
-    sendMsg() {
-        if((!this.text.trim() && !this.imageFile) || !this.activeConv) return;
-        
-        let formData = new FormData();
-        if(this.text.trim()) formData.append('message', this.text.trim());
-        if(this.imageFile) formData.append('image', this.imageFile);
-
-        let tempMsg = { message: this.text, image_path: this.imagePreview };
-        this.text = ''; 
-        this.removeImage();
-        this.appendMsg(tempMsg, true); 
-
-        fetch(`/chat/${this.activeConv}/messages`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content'),
-                'Accept': 'application/json'
-            },
-            body: formData
-        }).catch(() => alert('Lỗi gửi tin nhắn hoặc ảnh!'));
-    },
-
-    deleteChat() {
-        if(!this.activeConv) return;
-        if(!confirm('Xóa vĩnh viễn đoạn chat này?')) return;
-        
-        fetch(`/chat/${this.activeConv}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content'),
-                'Accept': 'application/json'
-            }
-        }).then(() => {
-            const item = document.getElementById('gconv-' + this.activeConv);
-            if(item) item.remove();
-            this.activeConv = null;
-            this.partnerName = 'Hộp thư tin nhắn';
-            document.getElementById('global-chat-box').innerHTML = `<div class='h-full flex flex-col items-center justify-center text-gray-400'><i class='fa-regular fa-paper-plane text-4xl mb-3 text-emerald-100'></i><p class='text-sm'>Đã xóa cuộc trò chuyện</p></div>`;
-        });
-    }
-}"
-@toggle-chat.window="isChatOpen = !isChatOpen; const dot = document.getElementById('chat-notification-dot'); if(isChatOpen && dot) dot.classList.add('hidden');"
-@open-direct-chat.window="openDirect($event.detail)"
-x-show="isChatOpen"
-style="display: none;"
-x-transition:enter="transition ease-out duration-300"
-x-transition:enter-start="opacity-0 translate-y-10 scale-95"
-x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-x-transition:leave="transition ease-in duration-200"
-x-transition:leave-start="opacity-100 translate-y-0 scale-100"
-x-transition:leave-end="opacity-0 translate-y-10 scale-95"
-class="fixed bottom-4 right-4 md:right-8 w-[360px] sm:w-[750px] h-[550px] bg-white shadow-[0_10px_60px_rgba(0,0,0,0.15)] rounded-2xl flex border border-gray-200 z-[99999] overflow-hidden pointer-events-auto"
+{{-- DÙNG CHUẨN ALPINE.DATA() ĐỂ CHỐNG LỖI TẢI TRANG --}}
+<div x-data="chatWidget"
+    @toggle-chat.window="isChatOpen = !isChatOpen; const dot = document.getElementById('chat-notification-dot'); if(isChatOpen && dot) dot.classList.add('hidden');"
+    @load-conversation.window="loadNewChat($event.detail)"
+    @message-arrived.window="handleIncomingMessage($event.detail)"
+    x-show="isChatOpen"
+    style="display: none;"
+    x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="opacity-0 translate-y-10 scale-95"
+    x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+    x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+    x-transition:leave-end="opacity-0 translate-y-10 scale-95"
+    class="fixed bottom-4 right-4 md:right-8 w-[380px] sm:w-[800px] h-[600px] bg-white shadow-[0_20px_70px_-15px_rgba(0,0,0,0.3)] rounded-3xl flex border-2 border-gray-200 z-[99999] overflow-hidden pointer-events-auto"
 >
     {{-- CỘT TRÁI: DANH SÁCH CHAT --}}
-    <div class="w-1/3 bg-gray-50/80 border-r border-gray-100 flex-col hidden sm:flex h-full relative z-10">
+    <div class="w-[35%] bg-gray-50/50 border-r-2 border-gray-100 flex-col hidden sm:flex h-full relative z-10 shadow-[3px_0_10px_-5px_rgba(0,0,0,0.05)]">
         
-        <div class="p-4 bg-white border-b border-gray-100 shrink-0 flex items-center gap-3">
-            <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm shadow-inner border border-emerald-200">
-                <i class="fa-solid fa-hand-holding-hand"></i>
+        <div class="p-4 bg-white/80 backdrop-blur-sm border-b-2 border-gray-100 shrink-0 flex items-center justify-between z-20">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-gradient-to-br from-green-400 to-emerald-600 rounded-lg flex items-center justify-center text-white text-xs shadow-md shadow-emerald-200/50 border border-emerald-400/50">
+                    <i class="fa-solid fa-hand-holding-hand"></i>
+                </div>
+                <span class="text-xl font-black uppercase tracking-tighter">
+                    <span class="text-gray-900">2</span><span class="bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-transparent">HAND</span>
+                </span>
             </div>
-            <h3 class="font-black text-gray-900 text-base">Hộp thư</h3>
         </div>
         
-        <div class="flex-1 overflow-y-auto no-scrollbar py-2">
+        {{-- THÊM ID ĐỂ QUẢN LÝ DANH SÁCH --}}
+        <div id="chat-list-container" class="flex-1 overflow-y-auto no-scrollbar p-2.5 space-y-1.5">
             @if($myConversations->isEmpty())
-                <div class="p-6 text-center text-gray-400 h-full flex flex-col items-center justify-center">
-                    <i class="fa-regular fa-comments text-3xl mb-2 text-gray-300"></i>
-                    <p class="text-xs font-semibold">Chưa có tin nhắn</p>
+                <div class="text-center text-gray-400 h-full flex flex-col items-center justify-center">
+                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3 border-2 border-white shadow-sm">
+                        <i class="fa-regular fa-comments text-2xl text-gray-300"></i>
+                    </div>
+                    <p class="text-xs font-bold text-gray-500">Hộp thư trống</p>
                 </div>
             @else
                 @foreach($myConversations as $conv)
                     @php
                         $isBuyer = $conv->buyer_id === Auth::id();
                         $partner = $isBuyer ? $conv->seller : $conv->buyer;
+                        $unreadInConv = \App\Models\Message::where('conversation_id', $conv->id)->where('sender_id', '!=', Auth::id())->where('is_read', false)->count();
                         
-                        // Đếm số tin nhắn chưa đọc của người này
-                        $unreadInConv = \App\Models\Message::where('conversation_id', $conv->id)
-                            ->where('sender_id', '!=', Auth::id())
-                            ->where('is_read', false)
-                            ->count();
+                        $roleText = $conv->product ? ($isBuyer ? 'Người bán' : 'Người mua') : '';
+                        $locked = false;
+                        if($conv->product && $conv->product->status === 'sold' && $conv->buyer_id != $conv->product->buyer_id) {
+                            $locked = true; 
+                        }
                     @endphp
                     
-                    {{-- CHUẨN ALPINE.JS: Click mượt mà, không bị chặn --}}
-                    <div @click="initChat({{ $conv->id }})" 
+                    <div @click="initChat({{ $conv->id }}, {{ $locked ? 'true' : 'false' }})" 
                          id="gconv-{{ $conv->id }}"
                          data-name="{{ $partner->name }}"
-                         class="global-conv-item p-3 border-b border-gray-50 hover:bg-emerald-50/50 cursor-pointer transition-colors flex items-center gap-3 relative group">
-                        
-                        <div class="active-bar absolute inset-y-0 left-0 w-1 bg-emerald-500 rounded-r-full transform scale-y-0 transition-transform duration-300"></div>
+                         class="global-conv-item p-3 rounded-2xl border-2 border-transparent hover:border-emerald-100 hover:bg-emerald-50/50 cursor-pointer transition-all flex items-center gap-3 relative group">
 
-                        <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-100 to-teal-50 text-emerald-700 flex items-center justify-center font-bold text-sm shrink-0 overflow-hidden border border-white shadow-sm ml-1">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-100 to-teal-50 text-emerald-700 flex items-center justify-center font-black text-base shrink-0 border-2 border-white shadow-sm overflow-hidden">
                             @if($partner->avatar)
                                 <img src="{{ asset('storage/' . $partner->avatar) }}" class="w-full h-full object-cover">
                             @else
@@ -257,23 +77,37 @@ class="fixed bottom-4 right-4 md:right-8 w-[360px] sm:w-[750px] h-[550px] bg-whi
                             @endif
                         </div>
 
-                        <div class="flex-1 overflow-hidden space-y-0.5">
+                        <div class="flex-1 overflow-hidden space-y-1">
                             <div class="flex justify-between items-center">
-                                <div class="flex items-center gap-1.5 truncate pr-2">
-                                    <h4 class="font-bold text-gray-900 text-sm truncate">{{ $partner->name }}</h4>
-                                    
-                                    {{-- HUY HIỆU ĐỎ CHO TIN NHẮN MỚI --}}
+                                <div class="flex items-center gap-1.5 truncate pr-1">
+                                    <h4 class="font-black text-gray-900 text-sm truncate">{{ $partner->name }}</h4>
                                     @if($unreadInConv > 0)
-                                        <span id="floating-unread-badge-{{ $conv->id }}" class="bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full leading-none shrink-0 shadow-sm">
+                                        <span id="floating-unread-badge-{{ $conv->id }}" class="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full leading-none shrink-0 shadow-sm animate-pulse border border-white">
                                             {{ $unreadInConv > 99 ? '99+' : $unreadInConv }}
                                         </span>
                                     @endif
                                 </div>
+                                @if($roleText)
+                                    <span class="text-[8px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-md whitespace-nowrap">{{ $roleText }}</span>
+                                @endif
                             </div>
-                            <p class="text-[10px] text-emerald-600 font-medium truncate inline-block">
-                                <i class="fa-solid fa-box-open mr-1"></i> {{ $conv->product->title }}
-                            </p>
+                            
+                            @if($conv->product)
+                                <p class="text-[10px] text-emerald-600 font-bold truncate">
+                                    <i class="fa-solid fa-box-open text-emerald-400 mr-1"></i> {{ $conv->product->title }}
+                                </p>
+                            @else
+                                <p class="text-[10px] text-blue-500 font-bold truncate">
+                                    <i class="fa-solid fa-comments text-blue-400 mr-1"></i> Trò chuyện trực tiếp
+                                </p>
+                            @endif
                         </div>
+
+                        @if($locked)
+                            <div class="absolute inset-0 bg-gray-50/50 backdrop-blur-[1px] flex items-center justify-center rounded-2xl">
+                                <i class="fa-solid fa-lock text-gray-400 text-xl drop-shadow-md"></i>
+                            </div>
+                        @endif
                     </div>
                 @endforeach
             @endif
@@ -281,60 +115,309 @@ class="fixed bottom-4 right-4 md:right-8 w-[360px] sm:w-[750px] h-[550px] bg-whi
     </div>
 
     {{-- CỘT PHẢI: KHUNG TRÒ CHUYỆN --}}
-    <div class="flex-1 flex flex-col bg-white h-full relative z-20">
-        <div class="p-4 border-b border-gray-100 bg-white flex justify-between items-center z-10 h-[65px] shrink-0">
+    <div class="flex-1 flex flex-col bg-gray-50/30 h-full relative z-20">
+        <div class="px-5 py-4 border-b-2 border-gray-200 bg-white/95 backdrop-blur flex justify-between items-center z-10 h-[70px] shrink-0 shadow-[0_5px_15px_-10px_rgba(0,0,0,0.05)]">
             <div>
-                <span x-text="partnerName" class="font-bold text-gray-900 text-base leading-tight ml-2"></span>
-                <div class="flex items-center gap-1.5 mt-0.5 ml-2" x-show="activeConv">
-                    <span class="flex items-center gap-1 text-[10px] text-emerald-500 font-medium">
-                        <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Online
+                <span x-text="partnerName" class="font-black text-gray-900 text-lg leading-tight"></span>
+                <div class="flex items-center gap-1.5 mt-0.5" x-show="activeConv">
+                    <span class="flex items-center gap-1.5 text-[10px] text-emerald-500 font-bold">
+                        <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_4px_#10b981]"></span> Đang hoạt động
                     </span>
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <button @click="deleteChat()" x-show="activeConv" class="text-gray-400 hover:text-red-500 w-8 h-8 rounded-full flex items-center justify-center transition" title="Xóa đoạn chat">
-                    <i class="fa-solid fa-trash-can"></i>
+                <button @click="deleteChat()" x-show="activeConv" class="w-8 h-8 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 border-2 border-transparent transition-all flex items-center justify-center shadow-sm bg-white" title="Xóa đoạn chat">
+                    <i class="fa-solid fa-trash-can text-sm"></i>
                 </button>
-                <button @click="isChatOpen = false" class="text-gray-400 hover:text-gray-700 w-8 h-8 rounded-full flex items-center justify-center transition">
+                <button @click="isChatOpen = false" class="w-8 h-8 rounded-lg text-gray-500 bg-gray-100 hover:bg-gray-200 hover:text-gray-800 transition-all flex items-center justify-center border-2 border-transparent shadow-sm">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
         </div>
 
-        <div id="global-chat-box" class="flex-1 overflow-y-auto p-5 bg-white flex flex-col gap-3">
+        <div id="global-chat-box" class="flex-1 overflow-y-auto p-5 bg-transparent flex flex-col gap-3 shadow-inner">
             <div x-show="!activeConv" class="h-full flex flex-col items-center justify-center text-gray-400">
-                <i class="fa-regular fa-paper-plane text-5xl text-emerald-100 mb-3"></i>
-                <p class="text-sm font-medium text-gray-500">Chọn cuộc trò chuyện để bắt đầu</p>
+                <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-4 border-4 border-emerald-50 shadow-sm">
+                    <i class="fa-regular fa-paper-plane text-4xl text-emerald-400 ml-[-3px] mt-[3px]"></i>
+                </div>
+                <p class="text-sm font-bold text-gray-500">Chọn cuộc trò chuyện để bắt đầu</p>
             </div>
         </div>
 
-        <div x-show="imagePreview" class="p-3 bg-white border-t border-gray-100" style="display: none;">
+        <div x-show="imagePreview" class="p-4 bg-white border-t-2 border-gray-100" style="display: none;">
             <div class="relative inline-block">
-                <img :src="imagePreview" class="h-14 rounded-lg border border-gray-200 object-cover shadow-sm">
-                <button @click="removeImage()" type="button" class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center hover:bg-red-600 shadow-md transition-transform hover:scale-110">
+                <img :src="imagePreview" class="h-16 rounded-xl border-2 border-gray-200 object-cover shadow-sm">
+                <button @click="removeImage()" type="button" class="absolute -top-3 -right-3 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 shadow-md border-2 border-white hover:scale-110 transition-transform">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
         </div>
+        
+        <div x-show="isLocked && activeConv" class="p-4 bg-gray-50 border-t-2 border-gray-200 text-center text-gray-500 font-bold text-sm" style="display:none;">
+            <i class="fa-solid fa-lock mr-1"></i> Sản phẩm đã bán. Phòng chat đã bị đóng.
+        </div>
 
-        <form @submit.prevent="sendMsg" enctype="multipart/form-data" class="p-3 border-t border-gray-100 flex items-center gap-2 bg-white shrink-0">
-            <label class="p-2 text-gray-400 hover:text-emerald-500 cursor-pointer transition-colors" :class="{'opacity-50 pointer-events-none': !activeConv}" title="Gửi ảnh">
-                <i class="fa-regular fa-image text-xl"></i>
-                <input type="file" id="global-image-input" accept="image/png, image/jpeg, image/webp" class="hidden" @change="handleImageSelect" :disabled="!activeConv">
+        <form @submit.prevent="sendMsg" x-show="!isLocked" enctype="multipart/form-data" class="px-5 py-4 border-t-2 border-gray-100 bg-white flex items-center gap-3 shrink-0">
+            <label class="p-2.5 bg-blue-50 border-2 border-blue-200 text-blue-500 hover:text-blue-600 hover:bg-blue-100 hover:border-blue-300 rounded-xl cursor-pointer transition-all shadow-sm flex items-center justify-center" :class="{'opacity-50 pointer-events-none': !activeConv}" title="Gửi ảnh">
+                <i class="fa-solid fa-camera-retro text-lg"></i>
+                <input type="file" id="global-image-input" accept="image/*" class="hidden" @change="handleImageSelect" :disabled="!activeConv">
             </label>
 
-            <input type="text" x-model="text" :disabled="!activeConv" class="flex-grow bg-gray-100 border-none rounded-full px-4 py-2.5 text-sm focus:ring-1 focus:ring-emerald-400 outline-none disabled:opacity-50 transition-all" placeholder="Nhập tin nhắn..." autocomplete="off">
+            <input type="text" x-model="text" :disabled="!activeConv" class="flex-grow bg-white border-2 border-gray-200 rounded-2xl px-5 py-3 text-sm font-medium focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none disabled:opacity-50 transition-all shadow-sm" placeholder="Viết tin nhắn..." autocomplete="off">
             
-            {{-- Nút Gửi (Hình máy bay giấy) --}}
-            <button type="submit" :disabled="!activeConv || (!text.trim() && !imageFile)" class="p-2 text-emerald-500 hover:text-emerald-600 transition-colors disabled:opacity-50 disabled:text-gray-300">
-                <i class="fa-solid fa-paper-plane text-xl"></i>
+            <button type="submit" :disabled="!activeConv || (!text && !imageFile)" class="p-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl shadow-md shadow-emerald-200/50 hover:from-emerald-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:shadow-none flex items-center justify-center transform hover:-translate-y-0.5 active:translate-y-0">
+                <i class="fa-solid fa-paper-plane text-lg ml-[-2px] mt-[2px]"></i>
             </button>
         </form>
     </div>
 </div>
-@endif
 
 <script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('chatWidget', () => ({
+            isChatOpen: false,
+            activeConv: null,
+            text: '',
+            imageFile: null,
+            imagePreview: null,
+            myId: {{ auth()->id() ?? 'null' }},
+            partnerName: 'Hộp thư tin nhắn',
+            isLocked: false,
+
+            initChat(convId, locked = false) {
+                this.isChatOpen = true;
+                this.isLocked = locked;
+                
+                const dot = document.getElementById('chat-notification-dot');
+                if(dot) dot.classList.add('hidden');
+                
+                if(!convId || this.activeConv === convId) return;
+                this.activeConv = convId;
+                
+                const box = document.getElementById('global-chat-box');
+                box.innerHTML = "<div class='text-center text-xs text-emerald-400 mt-24'><i class='fa-solid fa-circle-notch fa-spin text-4xl mb-3 text-emerald-300'></i><br><span class='font-bold text-gray-500'>Đang kết nối...</span></div>";
+
+                document.querySelectorAll('.global-conv-item').forEach(el => {
+                    el.classList.remove('bg-emerald-50', 'border-emerald-200');
+                    el.classList.add('border-transparent');
+                });
+                
+                const activeItem = document.getElementById('gconv-' + convId);
+                if(activeItem) {
+                    activeItem.classList.remove('border-transparent');
+                    activeItem.classList.add('bg-emerald-50', 'border-emerald-200');
+                    this.partnerName = activeItem.getAttribute('data-name');
+                }
+
+                const badge = document.getElementById('floating-unread-badge-' + convId);
+                if(badge) badge.style.display = 'none';
+
+                fetch(`/chat/${convId}/messages`)
+                    .then(res => res.json())
+                    .then(messages => {
+                        box.innerHTML = "<div class='text-center my-6 relative'><div class='absolute inset-0 flex items-center'><div class='w-full border-t-2 border-gray-100'></div></div><span class='relative bg-gray-50 px-4 py-1.5 text-[9px] font-black text-gray-400 rounded-full uppercase tracking-widest border-2 border-gray-100'>Bắt đầu nhắn tin</span></div>";
+                        messages.forEach(msg => this.appendMsg(msg, msg.sender_id === this.myId));
+                        setTimeout(() => { if(window.syncUnreadCount) window.syncUnreadCount(); }, 500);
+                    });
+            },
+
+            loadNewChat(data) {
+                this.isChatOpen = true;
+                this.activeConv = data.convId;
+                this.partnerName = data.partnerName;
+                this.isLocked = false;
+                
+                const dot = document.getElementById('chat-notification-dot');
+                if(dot) dot.classList.add('hidden');
+
+                const box = document.getElementById('global-chat-box');
+                box.innerHTML = "<div class='text-center text-xs text-emerald-400 mt-24'><i class='fa-solid fa-circle-notch fa-spin text-4xl mb-3 text-emerald-300'></i><br><span class='font-bold text-gray-500'>Đang chuẩn bị phòng chat...</span></div>";
+
+                document.querySelectorAll('.global-conv-item').forEach(el => {
+                    el.classList.remove('bg-emerald-50', 'border-emerald-200');
+                    el.classList.add('border-transparent');
+                });
+                
+                const activeItem = document.getElementById('gconv-' + data.convId);
+                if(activeItem) {
+                    activeItem.classList.remove('border-transparent');
+                    activeItem.classList.add('bg-emerald-50', 'border-emerald-200');
+                }
+
+                const badge = document.getElementById('floating-unread-badge-' + data.convId);
+                if(badge) badge.style.display = 'none';
+
+                fetch(`/chat/${data.convId}/messages`)
+                    .then(res => res.json())
+                    .then(messages => {
+                        box.innerHTML = "<div class='text-center my-6 relative'><div class='absolute inset-0 flex items-center'><div class='w-full border-t-2 border-gray-100'></div></div><span class='relative bg-gray-50 px-4 py-1.5 text-[9px] font-black text-gray-400 rounded-full uppercase tracking-widest border-2 border-gray-100'>Hãy gửi lời chào đầu tiên</span></div>";
+                        messages.forEach(msg => this.appendMsg(msg, msg.sender_id === this.myId));
+                        setTimeout(() => { if(window.syncUnreadCount) window.syncUnreadCount(); }, 500);
+                    });
+            },
+
+            // TÍNH NĂNG "GỌI HỒN": Xử lý khi có tin nhắn từ người lạ hoắc
+            handleIncomingMessage(msg) {
+                if (this.activeConv === msg.conversation_id && this.isChatOpen) {
+                    this.appendMsg(msg, false);
+                    fetch(`/chat/${msg.conversation_id}/messages`);
+                } else {
+                    const convItem = document.getElementById('gconv-' + msg.conversation_id);
+                    if (convItem) {
+                        // Người này có trong list -> Gắn chấm đỏ & Đẩy lên đầu
+                        let badge = document.getElementById('floating-unread-badge-' + msg.conversation_id);
+                        if (badge) {
+                            let current = parseInt(badge.innerText.replace('+', '')) || 0;
+                            badge.innerText = current + 1 > 99 ? '99+' : current + 1;
+                            badge.style.display = 'inline-block';
+                        } else {
+                            const titleDiv = convItem.querySelector('.flex.items-center.gap-1\\.5.truncate');
+                            if(titleDiv) {
+                                titleDiv.insertAdjacentHTML('beforeend', `<span id="floating-unread-badge-${msg.conversation_id}" class="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full leading-none shrink-0 shadow-sm animate-pulse border border-white">1</span>`);
+                            }
+                        }
+                        convItem.parentNode.prepend(convItem);
+                    } else {
+                        // BẮT ĐƯỢC NGƯỜI LẠ: Tự động vẽ thẻ HTML mới và nhét vào đầu danh sách
+                        const list = document.getElementById('chat-list-container');
+                        if(list.querySelector('.text-center.text-gray-400')) {
+                            list.innerHTML = ''; // Gỡ chữ "Hộp thư trống"
+                        }
+                        
+                        // Lấy ảnh avatar
+                        const avatarHtml = msg.sender.avatar 
+                            ? `<img src="/storage/${msg.sender.avatar}" class="w-full h-full object-cover">`
+                            : `${msg.sender.name.charAt(0)}`;
+                            
+                        // Xây dựng thẻ HTML
+                        const newHtml = `
+                            <div onclick="window.dispatchEvent(new CustomEvent('load-conversation', { detail: { convId: ${msg.conversation_id}, partnerName: '${msg.sender.name}' } }))" 
+                                 id="gconv-${msg.conversation_id}"
+                                 data-name="${msg.sender.name}"
+                                 class="global-conv-item p-3 rounded-2xl border-2 border-transparent hover:border-emerald-100 hover:bg-emerald-50/50 cursor-pointer transition-all flex items-center gap-3 relative group">
+
+                                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-100 to-teal-50 text-emerald-700 flex items-center justify-center font-black text-base shrink-0 border-2 border-white shadow-sm overflow-hidden">
+                                    ${avatarHtml}
+                                </div>
+
+                                <div class="flex-1 overflow-hidden space-y-1">
+                                    <div class="flex justify-between items-center">
+                                        <div class="flex items-center gap-1.5 truncate pr-1">
+                                            <h4 class="font-black text-gray-900 text-sm truncate">${msg.sender.name}</h4>
+                                            <span id="floating-unread-badge-${msg.conversation_id}" class="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full leading-none shrink-0 shadow-sm animate-pulse border border-white">1</span>
+                                        </div>
+                                    </div>
+                                    <p class="text-[10px] text-blue-500 font-bold truncate">
+                                        <i class="fa-solid fa-comments text-blue-400 mr-1"></i> Tin nhắn mới...
+                                    </p>
+                                </div>
+                            </div>
+                        `;
+                        // Nhét lên trên cùng
+                        list.insertAdjacentHTML('afterbegin', newHtml);
+                    }
+                }
+            },
+
+            appendMsg(msg, isMe) {
+                const box = document.getElementById('global-chat-box');
+                const alignWrapper = isMe ? 'flex justify-end' : 'flex justify-start';
+                const roundedClass = isMe ? 'rounded-2xl rounded-tr-sm' : 'rounded-2xl rounded-tl-sm';
+                
+                const bubbleClass = isMe 
+                    ? 'bg-gradient-to-br from-emerald-500 to-green-600 text-white shadow-md shadow-emerald-200 border border-emerald-400' 
+                    : 'bg-white text-gray-800 shadow-sm border-2 border-gray-100';
+                
+                let contentHTML = '';
+                if (msg.image_path && msg.image_path.startsWith('data:image')) {
+                    contentHTML += `<img src="${msg.image_path}" class="rounded-xl mb-1.5 max-w-[180px] object-cover border-2 border-white/20 shadow-sm">`;
+                } else if (msg.image_path) {
+                    contentHTML += `<a href="/storage/${msg.image_path}" target="_blank"><img src="/storage/${msg.image_path}" class="rounded-xl mb-1.5 max-w-[180px] object-cover border-2 border-white/20 shadow-sm hover:opacity-90 transition"></a>`;
+                }
+                if (msg.message) {
+                    const safeMsg = msg.message.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, '<br>');
+                    contentHTML += `<p class="text-[13px] font-medium leading-relaxed">${safeMsg}</p>`;
+                }
+
+                box.insertAdjacentHTML('beforeend', `<div class="${alignWrapper} mt-1.5 animate-fade-in-up"><div class="max-w-[80%] px-4 py-2.5 ${roundedClass} ${bubbleClass}">${contentHTML}</div></div>`);
+                box.scrollTop = box.scrollHeight;
+            },
+
+            handleImageSelect(event) {
+                const file = event.target.files[0];
+                if(file) {
+                    this.imageFile = file;
+                    const reader = new FileReader();
+                    reader.onload = (e) => { this.imagePreview = e.target.result; };
+                    reader.readAsDataURL(file);
+                }
+            },
+
+            removeImage() {
+                this.imageFile = null;
+                this.imagePreview = null;
+                document.getElementById('global-image-input').value = '';
+            },
+
+            sendMsg() {
+                if((!this.text.trim() && !this.imageFile) || !this.activeConv || this.isLocked) return;
+                
+                let formData = new FormData();
+                if(this.text.trim()) formData.append('message', this.text.trim());
+                if(this.imageFile) formData.append('image', this.imageFile);
+
+                this.text = ''; 
+                this.removeImage();
+
+                fetch(`/chat/${this.activeConv}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content'),
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        this.appendMsg(data.message, true);
+                    } else if (data.error) {
+                        alert('Lỗi gửi tin: ' + data.error);
+                    }
+                })
+                .catch(() => alert('Lỗi gửi tin nhắn hoặc ảnh!'));
+            },
+
+            deleteChat() {
+                if(!this.activeConv) return;
+                if(!confirm('Xóa vĩnh viễn đoạn chat này?')) return;
+                
+                fetch(`/chat/${this.activeConv}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content'),
+                        'Accept': 'application/json'
+                    }
+                }).then(() => {
+                    const item = document.getElementById('gconv-' + this.activeConv);
+                    if(item) item.remove();
+                    
+                    const list = document.getElementById('chat-list-container');
+                    if (list && list.children.length === 0) {
+                        list.innerHTML = `<div class="text-center text-gray-400 h-full flex flex-col items-center justify-center"><div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3 border-2 border-white shadow-sm"><i class="fa-regular fa-comments text-2xl text-gray-300"></i></div><p class="text-xs font-bold text-gray-500">Hộp thư trống</p></div>`;
+                    }
+
+                    this.activeConv = null;
+                    this.partnerName = 'Hộp thư tin nhắn';
+                    document.getElementById('global-chat-box').innerHTML = `<div class='h-full flex flex-col items-center justify-center text-gray-400'><div class='w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4 border-4 border-white shadow-sm'><i class='fa-regular fa-trash-can text-3xl text-gray-300'></i></div><p class='text-sm font-bold text-gray-500'>Đã xóa đoạn chat</p></div>`;
+                });
+            }
+        }));
+    });
+
+    // ==========================================
+    // LẮNG NGHE SÓNG KÊNH CÁ NHÂN (TÓM GỌN TẤT CẢ)
+    // ==========================================
     window.syncUnreadCount = function() {
         fetch('/chat/unread-count')
             .then(res => res.json())
@@ -344,21 +427,21 @@ class="fixed bottom-4 right-4 md:right-8 w-[360px] sm:w-[750px] h-[550px] bg-whi
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        const myId = {{ auth()->id() }};
-        const myConvIds = @json(\App\Models\Conversation::where('buyer_id', auth()->id())->orWhere('seller_id', auth()->id())->pluck('id'));
+        const myId = {{ auth()->id() ?? 'null' }};
 
-        if (typeof window.Echo !== 'undefined') {
-            myConvIds.forEach(id => {
-                window.Echo.private(`chat.${id}`)
-                    .listen('.message.sent', (e) => {
-                        if (e.message.sender_id !== myId) {
-                            window.syncUnreadCount();
-                        }
-                    });
-            });
+        if (typeof window.Echo !== 'undefined' && myId) {
+            // [CẬP NHẬT CỐT LÕI]: Chỉ lắng nghe 1 sóng duy nhất là User ID của bạn
+            window.Echo.private(`user.${myId}`)
+                .listen('.message.sent', (e) => {
+                    if (e.message.sender_id !== myId) {
+                        window.syncUnreadCount();
+                        window.dispatchEvent(new CustomEvent('message-arrived', { detail: e.message }));
+                    }
+                });
         }
 
         setInterval(() => { window.syncUnreadCount(); }, 10000);
     });
 </script>
+@endif
 @endauth

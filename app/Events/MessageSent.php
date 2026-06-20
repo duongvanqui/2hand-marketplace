@@ -32,12 +32,15 @@ class MessageSent implements ShouldBroadcast
      *
      * @return array<int, \Illuminate\Broadcasting\Channel>
      */
-    public function broadcastOn(): array
+    public function broadcastOn()
     {
-        // Phát sóng vào một kênh Riêng tư (Private) gắn với ID của phòng chat
-        // Ví dụ phòng chat số 5 -> Kênh tên là "chat.5"
+        $conversation = $this->message->conversation;
+        
         return [
             new PrivateChannel('chat.' . $this->message->conversation_id),
+            // Phát thẳng vào kênh cá nhân để tóm được người lạ
+            new PrivateChannel('user.' . $conversation->buyer_id),
+            new PrivateChannel('user.' . $conversation->seller_id),
         ];
     }
 

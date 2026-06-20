@@ -149,7 +149,10 @@
                                     <i class="fa-solid fa-arrow-down-long text-lg"></i>
                                 </div>
                                 <div class="max-w-[150px] sm:max-w-[250px] lg:max-w-[300px]">
-                                    <p class="font-bold text-gray-800 text-sm md:text-base leading-tight truncate">Tiền hàng: {{ $order->product->title }}</p>
+                                    {{-- [ĐÃ SỬA TẠI ĐÂY] Kiểm tra an toàn cho sản phẩm có thể đã bị xóa --}}
+                                    <p class="font-bold text-gray-800 text-sm md:text-base leading-tight truncate">
+                                        Tiền hàng: {{ $order->product ? $order->product->title : 'Sản phẩm đã bị xóa khỏi hệ thống' }}
+                                    </p>
                                     <p class="text-[11px] text-gray-500 mt-1 font-medium truncate"><i class="fa-solid fa-box-open mr-1 text-gray-400"></i> Người mua đã xác nhận</p>
                                 </div>
                             </div>

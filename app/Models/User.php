@@ -41,4 +41,26 @@ class User extends Authenticatable
     {
         return $this->hasMany(Conversation::class, 'seller_id');
     }
+
+    // Một user có thể yêu thích nhiều sản phẩm
+    public function favorites()
+    {
+        return $this->belongsToMany(Product::class, 'favorites')->withTimestamps();
+    }
+
+    public function followers()
+    {
+        return $this->belongsToMany(User::class, 'follows', 'following_id', 'follower_id');
+    }
+
+    // Lấy danh sách những người mà tài khoản này ĐANG ĐI THEO DÕI (Followings)
+    public function followings()
+    {
+        return $this->belongsToMany(User::class, 'follows', 'follower_id', 'following_id');
+    }
+
+    public function products()
+    {
+        return $this->hasMany(Product::class);
+    }
 }

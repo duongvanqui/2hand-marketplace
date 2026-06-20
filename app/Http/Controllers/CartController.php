@@ -9,7 +9,9 @@ use Illuminate\Support\Facades\Auth;
 
 class CartController extends Controller
 {
-    // 1. Hiển thị giỏ hàng từ Database
+    /**
+     * 1. Hiển thị danh sách giỏ hàng
+     */
     public function index()
     {
         // Lấy các sản phẩm trong giỏ của User đang đăng nhập
@@ -28,12 +30,14 @@ class CartController extends Controller
         return view('cart.index', compact('cartItems', 'total'));
     }
 
-    // 2. Thêm vào giỏ hàng (ĐÃ BỔ SUNG CHẶN TỰ MUA & AJAX)
+    /**
+     * 2. Thêm sản phẩm vào giỏ hàng (Hỗ trợ AJAX nhảy số động)
+     */
     public function add(Request $request, $id)
     {
         $product = Product::findOrFail($id);
 
-        // BỔ SUNG 1: Chặn người dùng tự mua sản phẩm của chính mình
+        // Chặn người dùng tự mua sản phẩm của chính mình
         if ($product->user_id === Auth::id()) {
             if ($request->ajax()) {
                 return response()->json(['success' => false, 'message' => 'Bạn không thể tự mua đồ do chính mình đăng bán!']);
@@ -41,7 +45,7 @@ class CartController extends Controller
             return redirect()->back()->with('error', 'Bạn không thể tự mua đồ do chính mình đăng bán!');
         }
 
-        // Kiểm tra xem sản phẩm đã bị bán chưa?
+        // Kiểm tra xem sản phẩm đã bị bán chưa
         if($product->status === 'sold') {
             if ($request->ajax()) {
                 return response()->json(['success' => false, 'message' => 'Rất tiếc, sản phẩm này đã được người khác mua!']);
@@ -67,28 +71,50 @@ class CartController extends Controller
             'product_id' => $id
         ]);
 
-        // Đếm lại tổng số lượng giỏ hàng để cập nhật lên Navbar
+        // Đếm lại tổng số lượng giỏ hàng để cập nhật lên Navbar công khai
         $cartCount = Cart::where('user_id', Auth::id())->count();
 
-        // BỔ SUNG 2: Nếu là request từ Ajax (Javascript), trả về JSON để không phải load lại trang
+        // [ĐÃ SỬA] Đổi 'cartCount' thành 'cart_count' để khớp 100% với JS nhận dữ liệu data.cart_count
         if ($request->ajax()) {
             return response()->json([
                 'success' => true, 
                 'message' => 'Đã thêm sản phẩm vào giỏ hàng!',
-                'cartCount' => $cartCount
+                'cart_count' => $cartCount
             ]);
         }
 
-        // Nếu là request bình thường (không dùng Ajax), tải lại trang như cũ
+        // Dự phòng nếu người dùng bấm bằng link thẻ <a> thông thường không dùng cơ chế chặn reload
         return redirect()->back()->with('success', 'Đã thêm sản phẩm vào giỏ hàng!');
     }
 
-    // 3. Xóa khỏi giỏ hàng
-    public function remove($id)
+    /**
+     * 3. Xóa sản phẩm khỏi giỏ hàng (Đã nâng cấp AJAX đồng bộ)
+     */
+    public function remove(Request $request, $id)
     {
         Cart::where('user_id', Auth::id())
             ->where('product_id', $id)
             ->delete();
+
+        // Tính toán lại số lượng và tổng tiền mới phòng trường hợp xóa bằng AJAX trên giao diện
+        $cartCount = Cart::where('user_id', Auth::id())->count();
+        
+        $cartItems = Cart::with('product')->where('user_id', Auth::id())->get();
+        $total = 0;
+        foreach($cartItems as $item) {
+            if($item->product && $item->product->status !== 'sold') {
+                $total += $item->product->price;
+            }
+        }
+
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Đã xóa sản phẩm khỏi giỏ hàng!',
+                'cart_count' => $cartCount,
+                'total' => $total
+            ]);
+        }
 
         return redirect()->back()->with('success', 'Đã xóa sản phẩm khỏi giỏ hàng!');
     }

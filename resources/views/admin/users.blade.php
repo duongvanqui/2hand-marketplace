@@ -6,21 +6,25 @@
 @section('header_title')
 <div class="flex flex-col">
     <span class="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
-        Danh sách người dùng
+        Danh sách Người dùng
     </span>
-    <p class="text-sm text-gray-500 font-medium mt-1">Trang chủ <i class="fa-solid fa-angle-right text-[10px] mx-1"></i> Quản lý người dùng</p>
+    <p class="text-sm text-gray-500 font-medium mt-1 flex items-center">
+        <a href="{{ route('admin.dashboard') ?? url('/admin') }}" class="hover:text-blue-600 transition-colors">Trang chủ</a> 
+        <i class="fa-solid fa-angle-right text-[10px] mx-2"></i> 
+        <span class="text-gray-900 font-bold">Quản lý Tài khoản</span>
+    </p>
 </div>
+@endsection
+
+@section('header_actions')
+<button type="button" onclick="openModal('modal-export')" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-200/50 flex items-center gap-2 transform hover:-translate-y-0.5">
+    <i class="fa-solid fa-file-export"></i> Xuất báo cáo
+</button>
 @endsection
 
 @section('content')
 <div class="pb-10">
 
-@section('header_actions')
-<button onclick="window.dispatchEvent(new CustomEvent('open-export-modal'))" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-200/50 flex items-center gap-2 transform hover:-translate-y-0.5">
-    <i class="fa-solid fa-file-export"></i> Xuất báo cáo
-</button>
-@endsection
-    
     {{-- HIỂN THỊ THÔNG BÁO FLASH --}}
     @if(session('success'))
         <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-2xl shadow-sm font-bold mb-6 flex items-center gap-3 animate-fade-in-down">
@@ -39,10 +43,11 @@
     {{-- 1. THỐNG KÊ NGƯỜI DÙNG (4 CARDS) --}}
     {{-- ========================================== --}}
     @php
-        // Giả lập số liệu thống kê (Bạn có thể Query từ DB thực tế sau)
-        $totalUsersCount = $users->total();
-        $activeUsers = $users->filter(fn($u) => $u->status == 1)->count();
-        $bannedUsers = $users->filter(fn($u) => $u->status == 0)->count();
+        // Lấy thống kê tổng quan toàn hệ thống (Dùng Model để đếm chính xác, không bị ảnh hưởng bởi phân trang)
+        $totalUsersCount = \App\Models\User::count();
+        $activeUsers = \App\Models\User::where('status', 1)->count();
+        $bannedUsers = \App\Models\User::where('status', 0)->count();
+        $newUsers = \App\Models\User::where('created_at', '>=', now()->subDays(7))->count();
     @endphp
     <div class="grid grid-cols-2 md:grid-cols-4 gap-5 mb-8">
         {{-- Card: Tổng người dùng --}}
@@ -56,8 +61,8 @@
                     <h3 class="text-2xl font-black text-gray-900 leading-tight">{{ number_format($totalUsersCount) }}</h3>
                 </div>
             </div>
-            <div class="pt-3 border-t border-gray-50 flex items-center text-[10px] font-bold text-green-500">
-                <i class="fa-solid fa-arrow-trend-up mr-1"></i> +18.2% <span class="text-gray-400 font-medium ml-1">so với tuần trước</span>
+            <div class="pt-3 border-t border-gray-50 flex items-center text-[10px] font-bold text-blue-500">
+                <i class="fa-solid fa-clock mr-1"></i> Cập nhật theo thời gian thực
             </div>
         </div>
 
@@ -72,8 +77,8 @@
                     <h3 class="text-2xl font-black text-gray-900 leading-tight">{{ number_format($activeUsers) }}</h3>
                 </div>
             </div>
-            <div class="pt-3 border-t border-gray-50 flex items-center text-[10px] font-bold text-green-500">
-                <i class="fa-solid fa-arrow-trend-up mr-1"></i> +15.7% <span class="text-gray-400 font-medium ml-1">so với tuần trước</span>
+            <div class="pt-3 border-t border-gray-50 flex items-center text-[10px] font-bold text-emerald-500">
+                <i class="fa-solid fa-shield-check mr-1"></i> Tài khoản an toàn
             </div>
         </div>
 
@@ -85,11 +90,11 @@
                 </div>
                 <div>
                     <p class="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Đăng ký mới (7 ngày)</p>
-                    <h3 class="text-2xl font-black text-gray-900 leading-tight">245</h3>
+                    <h3 class="text-2xl font-black text-gray-900 leading-tight">{{ number_format($newUsers) }}</h3>
                 </div>
             </div>
             <div class="pt-3 border-t border-gray-50 flex items-center text-[10px] font-bold text-yellow-500">
-                <i class="fa-solid fa-arrow-trend-up mr-1"></i> +12.3% <span class="text-gray-400 font-medium ml-1">so với tuần trước</span>
+                <i class="fa-solid fa-arrow-trend-up mr-1"></i> Tăng trưởng tuần
             </div>
         </div>
 
@@ -105,7 +110,7 @@
                 </div>
             </div>
             <div class="pt-3 border-t border-red-100 flex items-center text-[10px] font-bold text-red-500">
-                <i class="fa-solid fa-arrow-trend-down mr-1"></i> -8.1% <span class="text-gray-400 font-medium ml-1">so với tuần trước</span>
+                <i class="fa-solid fa-triangle-exclamation mr-1"></i> Cần theo dõi
             </div>
         </div>
     </div>
@@ -113,53 +118,47 @@
     {{-- ========================================== --}}
     {{-- 2. THANH CÔNG CỤ (TÌM KIẾM & BỘ LỌC) --}}
     {{-- ========================================== --}}
-    <div class="bg-white p-4 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-gray-100 flex flex-col xl:flex-row justify-between items-center gap-4 mb-6">
+    <div class="bg-white p-5 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] border border-gray-100 flex flex-col xl:flex-row justify-between items-center gap-4 mb-6">
         
-        {{-- Tìm kiếm & Lọc Form --}}
-        <form action="{{ route('admin.users.index') }}" method="GET" class="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+        {{-- Nhóm Trái: Tìm kiếm & Lọc (Đồng bộ form giống trang Đơn hàng) --}}
+        <form action="{{ route('admin.users.index') }}" method="GET" class="flex flex-wrap md:flex-nowrap items-center gap-3 w-full xl:w-auto">
             
             {{-- Ô Search --}}
-            <div class="relative w-full sm:w-72">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                </div>
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="Tìm kiếm theo tên, email, SĐT..." class="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50 transition-all font-medium">
+            <div class="relative w-full md:w-72">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Tìm tên, email, SĐT..." class="w-full pl-11 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all font-medium">
             </div>
 
-            {{-- Filter Vai trò --}}
-            <div class="flex items-center gap-2">
-                <span class="text-sm font-bold text-gray-600 hidden sm:block">Vai trò</span>
-                <select name="role" class="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block w-full p-2 outline-none font-medium cursor-pointer">
-                    <option value="">Tất cả vai trò</option>
-                    <option value="admin" {{ request('role') == 'admin' ? 'selected' : '' }}>Admin</option>
-                    <option value="user" {{ request('role') == 'user' ? 'selected' : '' }}>Người dùng</option>
-                </select>
-            </div>
+            {{-- Lọc Vai trò --}}
+            <select name="role" class="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-xl px-4 py-2 focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none cursor-pointer font-medium w-full md:w-auto">
+                <option value="">Tất cả vai trò</option>
+                <option value="admin" {{ request('role') == 'admin' ? 'selected' : '' }}>Admin</option>
+                <option value="user" {{ request('role') == 'user' ? 'selected' : '' }}>Người dùng</option>
+            </select>
 
-            {{-- Filter Trạng thái --}}
-            <div class="flex items-center gap-2">
-                <span class="text-sm font-bold text-gray-600 hidden sm:block">Trạng thái</span>
-                <select name="status" class="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block w-full p-2 outline-none font-medium cursor-pointer">
-                    <option value="">Tất cả trạng thái</option>
-                    <option value="1" {{ request('status') == '1' ? 'selected' : '' }}>Hoạt động</option>
-                    <option value="0" {{ request('status') == '0' ? 'selected' : '' }}>Bị khóa</option>
-                </select>
-            </div>
+            {{-- Lọc Trạng thái --}}
+            <select name="status" class="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-xl px-4 py-2 focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none cursor-pointer font-medium w-full md:w-auto">
+                <option value="">Tất cả trạng thái</option>
+                <option value="1" {{ request('status') == '1' ? 'selected' : '' }}>Hoạt động</option>
+                <option value="0" {{ request('status') == '0' ? 'selected' : '' }}>Bị khóa</option>
+            </select>
 
-            <button type="submit" class="hidden"></button> {{-- Ẩn nút submit, tự động chạy khi nhấn Enter ở ô input --}}
+            {{-- Nút Lọc và Xóa Lọc --}}
+            <div class="flex items-center gap-2 w-full md:w-auto">
+                <button type="submit" class="px-5 py-2 bg-gray-800 hover:bg-gray-900 text-white text-sm font-bold rounded-xl transition-colors shadow-sm whitespace-nowrap">
+                    Tìm
+                </button>
+                @if(request()->hasAny(['search', 'role', 'status']))
+                    <a href="{{ route('admin.users.index') }}" class="px-4 py-2 bg-red-50 text-red-600 text-sm font-bold rounded-xl hover:bg-red-100 transition shadow-sm border border-red-100 whitespace-nowrap">
+                        <i class="fa-solid fa-xmark"></i> Xóa
+                    </a>
+                @endif
+            </div>
         </form>
 
-        {{-- Nút Chức năng phải --}}
-        <div class="flex items-center gap-3 w-full xl:w-auto">
-            @if(request()->hasAny(['search', 'role', 'status']))
-                <a href="{{ route('admin.users.index') }}" class="px-4 py-2 bg-red-50 text-red-600 text-sm font-bold rounded-xl hover:bg-red-100 transition shadow-sm border border-red-100">
-                    <i class="fa-solid fa-xmark mr-1"></i> Xóa lọc
-                </a>
-            @endif
-            <button class="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-xl hover:bg-gray-50 transition shadow-sm flex items-center gap-2">
-                <i class="fa-solid fa-filter"></i> Lọc nâng cao
-            </button>
-            <button onclick="openModal('modal-add-user')" class="px-5 py-2 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition shadow-md shadow-blue-200 flex items-center gap-2 transform hover:-translate-y-0.5">
+        {{-- Nhóm Phải: Chỉ còn nút Thêm Mới --}}
+        <div class="flex items-center w-full xl:w-auto justify-end">
+            <button onclick="openModal('modal-add-user')" class="px-5 py-2 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition shadow-md shadow-blue-200 flex items-center gap-2 transform hover:-translate-y-0.5 whitespace-nowrap">
                 <i class="fa-solid fa-user-plus"></i> Thêm mới
             </button>
         </div>
@@ -187,7 +186,7 @@
                     <tr class="hover:bg-gray-50/80 transition-colors group">
                         <td class="p-5 text-gray-400 font-bold">{{ $users->firstItem() + $index }}</td>
                         
-                        {{-- Cột 1: Thông tin User (Avatar + Tên) --}}
+                        {{-- Cột 1: Thông tin User --}}
                         <td class="p-5">
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 rounded-full border border-gray-200 overflow-hidden shrink-0 shadow-sm">
@@ -238,7 +237,7 @@
 
                         {{-- Cột 6: Thao tác --}}
                         <td class="p-5">
-                            <div class="flex items-center justify-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div class="flex items-center justify-center space-x-1.5">
                                 
                                 {{-- Nút Khóa / Mở --}}
                                 <form action="{{ route('admin.users.toggle-status', $user->id) }}" method="POST" class="inline" onsubmit="return confirm('Xác nhận thay đổi trạng thái tài khoản này?')">
@@ -290,6 +289,83 @@
 {{-- ========================================== --}}
 {{-- MODALS KẾ THỪA CHUẨN UI --}}
 {{-- ========================================== --}}
+
+{{-- Modal Xuất Báo Cáo (Chuẩn thiết kế Minimalist) --}}
+<div id="modal-export" class="fixed inset-0 z-[100] hidden bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4 transition-all duration-300">
+    <div class="bg-white rounded-2xl shadow-xl max-w-[420px] w-full overflow-hidden flex flex-col transform transition-transform">
+        
+        {{-- Header --}}
+        <div class="px-6 py-5 flex items-center justify-between border-b border-gray-100">
+            <h3 class="text-base font-black text-gray-800 flex items-center gap-2">
+                <i class="fa-solid fa-file-export text-blue-600"></i> Xuất Báo Cáo Người Dùng
+            </h3>
+            <button type="button" onclick="closeModal('modal-export')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        {{-- Body Form --}}
+        <form action="{{ route('admin.export', ['type' => 'users']) }}" method="GET" class="p-6">
+            {{-- Giữ lại các filter tìm kiếm nếu có --}}
+            @if(request('search')) <input type="hidden" name="search" value="{{ request('search') }}"> @endif
+            @if(request('role')) <input type="hidden" name="role" value="{{ request('role') }}"> @endif
+
+            {{-- Row 1: Chọn Ngày (Mặc định lùi 1 tháng) --}}
+            <div class="grid grid-cols-2 gap-4 mb-5">
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Từ ngày</label>
+                    <input type="date" name="from_date" value="{{ now()->subMonth()->format('Y-m-d') }}" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Đến ngày</label>
+                    <input type="date" name="to_date" value="{{ now()->format('Y-m-d') }}" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
+                </div>
+            </div>
+
+            {{-- Row 2: Tùy chọn Dữ liệu xuất (Dropdown) --}}
+            <div class="mb-5">
+                <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Dữ liệu xuất</label>
+                <select name="export_status" class="w-full px-3 py-2.5 border border-gray-200 bg-white rounded-lg text-sm text-gray-700 font-medium focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors cursor-pointer">
+                    <option value="all">Tất cả người dùng (Toàn bộ)</option>
+                    <option value="1">Chỉ người dùng Đang hoạt động</option>
+                    <option value="0">Chỉ người dùng Bị khóa</option>
+                </select>
+            </div>
+
+            {{-- Row 3: Định dạng file --}}
+            <div class="mb-8">
+                <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Định dạng file</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-all has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/30">
+                        <input type="radio" name="format" value="excel" checked class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 mt-0.5">
+                        <div class="flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-excel text-green-600 text-lg"></i>
+                            <span class="font-bold text-gray-700 text-sm">Excel</span>
+                        </div>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-all has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50/30">
+                        <input type="radio" name="format" value="pdf" class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 mt-0.5">
+                        <div class="flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-pdf text-red-600 text-lg"></i>
+                            <span class="font-bold text-gray-700 text-sm">PDF</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            {{-- Buttons --}}
+            <div class="flex justify-between gap-3">
+                <button type="button" onclick="closeModal('modal-export')" class="w-1/3 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-sm transition-colors">
+                    Hủy
+                </button>
+                <button type="submit" onclick="setTimeout(() => closeModal('modal-export'), 800)" class="w-2/3 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition-all shadow-md shadow-blue-200 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-download"></i> Tải xuống
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
 
 {{-- Modal Thêm User --}}
 <div id="modal-add-user" class="fixed inset-0 z-50 hidden bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4">

@@ -153,7 +153,7 @@
                     <span x-show="sidebarOpen" class="whitespace-nowrap transition-opacity">Tin đã lưu (Yêu thích)</span>
                 </a>
 
-                {{-- [ĐÃ FIX TRẢ LẠI MÀU VÀNG] 7. Đánh giá của tôi --}}
+                {{-- 7. Đánh giá của tôi --}}
                 <a href="{{ route('reviews.index') }}" class="relative flex items-center px-3 py-3 rounded-xl font-medium transition-all duration-300 group overflow-hidden {{ request()->routeIs('reviews.*') ? 'bg-yellow-50 text-yellow-500 shadow-sm' : 'text-gray-500 hover:bg-gray-50 hover:text-yellow-500 hover:translate-x-1' }}">
                     <i class="fa-solid fa-star text-lg w-8 text-center transition-transform duration-300 group-hover:scale-110 {{ request()->routeIs('reviews.*') ? 'text-yellow-500' : 'group-hover:text-yellow-500' }}"></i>
                     <span x-show="sidebarOpen" class="whitespace-nowrap transition-opacity">Đánh giá của tôi</span>
@@ -163,6 +163,12 @@
                 <a href="{{ route('wallet.index') }}" class="relative flex items-center px-3 py-3 rounded-xl font-medium transition-all duration-300 group overflow-hidden {{ request()->routeIs('wallet.*') ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200/50' : 'text-gray-500 hover:bg-gray-50 hover:text-emerald-600 hover:translate-x-1' }}">
                     <i class="fa-solid fa-wallet text-lg w-8 text-center transition-transform duration-300 group-hover:scale-110"></i>
                     <span x-show="sidebarOpen" class="whitespace-nowrap transition-opacity">Ví 2HAND</span>
+                </a>
+
+                {{-- 9. Cài đặt tài khoản --}}
+                <a href="{{ url('/profile') }}" class="relative flex items-center px-3 py-3 rounded-xl font-medium transition-all duration-300 group overflow-hidden {{ request()->is('profile*') ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200/50' : 'text-gray-500 hover:bg-gray-50 hover:text-emerald-600 hover:translate-x-1' }}">
+                    <i class="fa-solid fa-user-gear text-lg w-8 text-center transition-transform duration-300 group-hover:scale-110"></i>
+                    <span x-show="sidebarOpen" class="whitespace-nowrap transition-opacity">Cài đặt tài khoản</span>
                 </a>
 
                 {{-- KHOẢNG TRỐNG CHO ADMIN --}}
@@ -194,7 +200,6 @@
                     <span x-show="sidebarOpen" class="whitespace-nowrap transition-opacity">Quản lý Giao dịch</span>
                 </a>
 
-                {{-- [ĐÃ CHUYỂN VỊ TRÍ] Quản lý Báo cáo nằm trên Quản trị Tài chính --}}
                 <a href="{{ route('admin.reports.index') }}" class="relative flex items-center px-3 py-3 rounded-xl font-medium transition-all duration-300 group overflow-hidden {{ request()->routeIs('admin.reports.*') ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-200/50' : 'text-gray-500 hover:bg-gray-50 hover:text-indigo-600 hover:translate-x-1' }}">
                     <i class="fa-solid fa-flag text-lg w-8 text-center transition-transform duration-300 group-hover:scale-110"></i>
                     <span x-show="sidebarOpen" class="whitespace-nowrap transition-opacity">Quản lý Báo cáo</span>
@@ -226,9 +231,9 @@
             <div class="sticky top-0 z-30 bg-gray-50/80 backdrop-blur-lg border-b border-gray-200/50 px-8 py-5 mb-8 flex items-center justify-between">
                 <div class="flex items-center space-x-4">
 
-                    {{-- Nút Hamburger --}}
-                    <button @click="sidebarOpen = !sidebarOpen" class="w-10 h-10 bg-white rounded-xl shadow-sm border border-gray-200 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all flex items-center justify-center outline-none group">
-                        <i class="fa-solid fa-bars-staggered transition-transform group-hover:scale-110"></i>
+                    {{-- Nút Hamburger (Đã được thiết kế lại y hệt ảnh) --}}
+                    <button @click="sidebarOpen = !sidebarOpen" class="w-12 h-12 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-[1.25rem] shadow-sm hover:bg-emerald-500 hover:text-white hover:shadow-emerald-200 transition-all flex items-center justify-center outline-none group shrink-0">
+                        <i class="fa-solid fa-bars text-xl transition-transform group-hover:scale-110"></i>
                     </button>
 
                     {{-- NÚT QUAY LẠI TỰ ĐỘNG --}}

@@ -72,10 +72,14 @@
     'Thú cưng' => 'fa-paw',
     ];
 
-    // Lấy dữ liệu thông báo thật từ DB
+    // Lấy dữ liệu user đang đăng nhập
     $unreadNotiCount = Auth::check() ? Auth::user()->unreadNotifications->count() : 0;
     $notifications = Auth::check() ? Auth::user()->notifications()->take(10)->get() : collect();
     $cartCount = Auth::check() ? \App\Models\Cart::where('user_id', Auth::id())->count() : 0;
+
+    // Lấy danh sách sản phẩm yêu thích để đổ vào Dropdown
+    $favoritesCount = Auth::check() ? Auth::user()->favorites()->count() : 0;
+    $favoriteProducts = Auth::check() ? Auth::user()->favorites()->take(4)->get() : collect();
     @endphp
 
     {{-- ========================================== --}}
@@ -168,7 +172,7 @@
                 @if(request()->has('category_id'))
                 <input type="hidden" name="category_id" value="{{ request('category_id') }}">
                 @endif
-                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-7 h-full transition-colors font-bold text-sm flex items-center gap-2 outline-none cursor-pointer">
+                <button type="submit" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-7 h-full transition-colors font-bold text-sm flex items-center gap-2 outline-none cursor-pointer">
                     <i class="fa-solid fa-magnifying-glass"></i> Tìm
                 </button>
             </form>
@@ -193,11 +197,68 @@
                     <span class="text-[10px] font-bold hidden sm:block">Giỏ hàng</span>
                 </a>
 
-                {{-- Đã lưu --}}
-                <a href="{{ route('favorites.index') }}" class="w-12 lg:w-14 h-14 hidden lg:flex flex-col justify-center items-center gap-1 text-gray-500 hover:text-red-500 rounded-xl hover:bg-red-50 transition-all group">
-                    <i class="fa-solid fa-heart text-xl transition-transform duration-300 group-hover:scale-110"></i>
+                {{-- KHU VỰC SẢN PHẨM ĐÃ LƯU --}}
+                @auth
+                <div x-data="{ openFavorites: false }" class="relative hidden lg:block z-[100]">
+                    <button @click="openFavorites = !openFavorites" @click.away="openFavorites = false" class="w-14 h-14 flex flex-col justify-center items-center gap-1 text-gray-500 hover:text-red-500 rounded-xl hover:bg-red-50 transition-all group relative border-none outline-none cursor-pointer">
+                        <div class="relative">
+                            <i class="fa-solid fa-heart text-xl transition-transform duration-300 group-hover:scale-110"></i>
+                            <span x-show="{{ $favoritesCount }} > 0" class="absolute -top-1.5 -right-2 bg-red-500 text-white text-[10px] font-black rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center border-2 border-white shadow-sm">
+                                {{ $favoritesCount > 99 ? '99+' : $favoritesCount }}
+                            </span>
+                        </div>
+                        <span class="text-[10px] font-bold">Đã lưu</span>
+                    </button>
+
+                    {{-- Khung Dropdown Sản phẩm đã lưu --}}
+                    <div x-show="openFavorites"
+                        x-transition:enter="transition ease-out duration-200"
+                        x-transition:enter-start="opacity-0 translate-y-3 scale-95"
+                        x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                        x-transition:leave="transition ease-in duration-150"
+                        x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                        x-transition:leave-end="opacity-0 translate-y-3 scale-95"
+                        class="absolute top-[120%] -right-16 w-[360px] bg-white rounded-3xl shadow-[0_15px_60px_rgba(0,0,0,0.15)] border border-gray-100 overflow-hidden z-[9999]" style="display: none;">
+
+                        <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80 backdrop-blur-sm">
+                            <h3 class="font-black text-gray-900 text-base">Sản phẩm đã lưu</h3>
+                            <span class="text-xs font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-md">{{ $favoritesCount }} mục</span>
+                        </div>
+
+                        <div class="max-h-[350px] overflow-y-auto no-scrollbar bg-white">
+                            @forelse($favoriteProducts as $favProduct)
+                            <a href="{{ route('products.show', $favProduct->slug) }}" class="flex gap-3 p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors group">
+                                <div class="w-16 h-16 rounded-xl bg-gray-100 shrink-0 overflow-hidden border border-gray-200">
+                                    @if($favProduct->images && $favProduct->images->count() > 0)
+                                    <img src="{{ asset('storage/' . $favProduct->images->first()->image_path) }}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300">
+                                    @else
+                                    <div class="w-full h-full flex items-center justify-center text-gray-300"><i class="fa-regular fa-image text-xl"></i></div>
+                                    @endif
+                                </div>
+                                <div class="flex-1 flex flex-col justify-center">
+                                    <h4 class="text-sm font-semibold text-gray-800 line-clamp-2 leading-tight group-hover:text-red-500 transition-colors">{{ $favProduct->title }}</h4>
+                                    <p class="text-red-600 font-black text-sm mt-1.5">{{ number_format($favProduct->price, 0, ',', '.') }}đ</p>
+                                </div>
+                            </a>
+                            @empty
+                            <div class="p-8 flex flex-col items-center justify-center text-center text-gray-400">
+                                <i class="fa-regular fa-heart text-4xl mb-3 text-gray-200"></i>
+                                <p class="text-sm font-medium">Bạn chưa lưu sản phẩm nào.</p>
+                            </div>
+                            @endforelse
+                        </div>
+
+                        <div class="p-4 border-t border-gray-100 text-center bg-gray-50/50">
+                            <a href="{{ route('favorites.index') }}" class="text-sm font-bold text-gray-500 hover:text-red-600 transition-colors">Xem tất cả đã lưu</a>
+                        </div>
+                    </div>
+                </div>
+                @else
+                <button type="button" onclick="window.location.href='{{ route('login') }}'" class="hidden lg:flex w-14 h-14 flex-col justify-center items-center gap-1 text-gray-500 hover:text-red-500 rounded-xl hover:bg-red-50 transition-all group border-none outline-none cursor-pointer">
+                    <i class="fa-regular fa-heart text-xl transition-transform duration-300 group-hover:scale-110"></i>
                     <span class="text-[10px] font-bold">Đã lưu</span>
-                </a>
+                </button>
+                @endauth
 
                 {{-- Tin nhắn --}}
                 @auth
@@ -233,9 +294,7 @@
                 </button>
                 @endauth
 
-                {{-- ========================================= --}}
-                {{-- KHU VỰC THÔNG BÁO --}}
-                {{-- ========================================= --}}
+                {{-- THÔNG BÁO --}}
                 @auth
                 <div x-data="{ 
                         openNotifications: false, 
@@ -399,10 +458,11 @@
                         </div>
                     </div>
                     @else
+                    {{-- NÚT ĐĂNG NHẬP VÀ ĐĂNG KÝ --}}
                     <div class="flex items-center gap-3 pl-2">
-                        <a href="{{ route('login') }}" class="text-sm font-bold text-gray-500 hover:text-emerald-700 transition py-2 px-3 rounded-xl hover:bg-gray-50">Đăng nhập</a>
+                        <a href="{{ route('login') }}" class="text-sm font-bold bg-white border border-gray-200 text-gray-600 hover:text-emerald-600 hover:border-emerald-300 shadow-sm transition py-2 px-4 rounded-xl">Đăng nhập</a>
                         @if (Route::has('register'))
-                        <a href="{{ route('register') }}" class="text-sm font-bold bg-emerald-50 text-emerald-600 px-5 py-2 rounded-xl hover:bg-emerald-100 transition shadow-sm border border-emerald-100">Đăng ký</a>
+                        <a href="{{ route('register') }}" class="text-sm font-bold bg-emerald-50 border border-emerald-100 text-emerald-600 px-5 py-2 rounded-xl hover:bg-emerald-100 hover:border-emerald-200 transition shadow-sm">Đăng ký</a>
                         @endif
                     </div>
                     @endauth
@@ -446,18 +506,18 @@
             <div>
                 <h4 class="font-black text-gray-900 mb-6 uppercase tracking-wider">Về 2HAND</h4>
                 <ul class="space-y-3 text-sm text-gray-500 font-medium">
-                    <li><a href="#" class="hover:text-emerald-600 transition-colors flex items-center gap-2"><i class="fa-solid fa-chevron-right text-[10px] text-emerald-500"></i> Giới thiệu về chúng tôi</a></li>
-                    <li><a href="#" class="hover:text-emerald-600 transition-colors flex items-center gap-2"><i class="fa-solid fa-chevron-right text-[10px] text-emerald-500"></i> Quy chế hoạt động sàn</a></li>
-                    <li><a href="#" class="hover:text-emerald-600 transition-colors flex items-center gap-2"><i class="fa-solid fa-chevron-right text-[10px] text-emerald-500"></i> Chính sách bảo mật</a></li>
+                    <li><a href="{{ route('pages.about') }}" class="hover:text-emerald-600 transition-colors flex items-center gap-2 group"><i class="fa-solid fa-chevron-right text-[10px] text-emerald-500 group-hover:translate-x-1 transition-transform"></i> Giới thiệu về chúng tôi</a></li>
+                    <li><a href="{{ route('pages.regulations') }}" class="hover:text-emerald-600 transition-colors flex items-center gap-2 group"><i class="fa-solid fa-chevron-right text-[10px] text-emerald-500 group-hover:translate-x-1 transition-transform"></i> Quy chế hoạt động sàn</a></li>
+                    <li><a href="{{ route('pages.privacy') }}" class="hover:text-emerald-600 transition-colors flex items-center gap-2 group"><i class="fa-solid fa-chevron-right text-[10px] text-emerald-500 group-hover:translate-x-1 transition-transform"></i> Chính sách bảo mật</a></li>
                 </ul>
             </div>
 
             <div>
                 <h4 class="font-black text-gray-900 mb-6 uppercase tracking-wider">Hỗ trợ khách hàng</h4>
                 <ul class="space-y-3 text-sm text-gray-500 font-medium">
-                    <li><a href="#" class="hover:text-emerald-600 transition-colors flex items-center gap-2"><i class="fa-solid fa-chevron-right text-[10px] text-emerald-500"></i> Trung tâm trợ giúp</a></li>
-                    <li><a href="#" class="hover:text-emerald-600 transition-colors flex items-center gap-2"><i class="fa-solid fa-chevron-right text-[10px] text-emerald-500"></i> Hướng dẫn mua bán an toàn</a></li>
-                    <li><a href="#" class="hover:text-emerald-600 transition-colors flex items-center gap-2"><i class="fa-solid fa-chevron-right text-[10px] text-emerald-500"></i> Hướng dẫn thanh toán COD</a></li>
+                    <li><a href="{{ route('pages.help') }}" class="hover:text-emerald-600 transition-colors flex items-center gap-2 group"><i class="fa-solid fa-chevron-right text-[10px] text-emerald-500 group-hover:translate-x-1 transition-transform"></i> Trung tâm trợ giúp</a></li>
+                    <li><a href="{{ route('pages.safe_trading') }}" class="hover:text-emerald-600 transition-colors flex items-center gap-2 group"><i class="fa-solid fa-chevron-right text-[10px] text-emerald-500 group-hover:translate-x-1 transition-transform"></i> Hướng dẫn mua bán an toàn</a></li>
+                    <li><a href="{{ route('pages.cod_guide') }}" class="hover:text-emerald-600 transition-colors flex items-center gap-2 group"><i class="fa-solid fa-chevron-right text-[10px] text-emerald-500 group-hover:translate-x-1 transition-transform"></i> Hướng dẫn thanh toán COD</a></li>
                 </ul>
             </div>
 
@@ -468,7 +528,7 @@
                         <div class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-phone"></i></div>
                         <div>
                             <p class="text-xs text-gray-400">Hotline hỗ trợ</p>
-                            <p class="text-gray-900 font-bold text-base">1900 1234</p>
+                            <p class="text-gray-900 font-bold text-base">1900 1234 (10.000/phút)</p>
                         </div>
                     </li>
                     <li class="flex items-start gap-3">
@@ -495,63 +555,63 @@
             if (!confirm('Bạn có chắc chắn muốn xóa thông báo này?')) return;
 
             fetch(`/notifications/${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content'),
-                    'Accept': 'application/json'
-                }
-            }).then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    const wrapper = btnElement.closest('.noti-wrapper');
-                    wrapper.style.opacity = '0';
-                    wrapper.style.transform = 'scale(0.95)';
-                    setTimeout(() => wrapper.remove(), 300);
-                }
-            });
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content'),
+                        'Accept': 'application/json'
+                    }
+                }).then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const wrapper = btnElement.closest('.noti-wrapper');
+                        wrapper.style.opacity = '0';
+                        wrapper.style.transform = 'scale(0.95)';
+                        setTimeout(() => wrapper.remove(), 300);
+                    }
+                });
         }
 
-        // [ĐÃ SỬA]: Gom hàm route() lại thành 1 dòng để tránh lỗi cú pháp của Blade
         function toggleFavorite(productId, btnElement) {
-            fetch('{{ route('favorites.toggle') }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    product_id: productId
+            // ĐÃ SỬA CÚ PHÁP LỖI Ở ĐÂY 👇
+            fetch('{{ route("favorites.toggle") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        product_id: productId
+                    })
                 })
-            })
-            .then(response => {
-                if (response.status === 401) {
-                    alert('Bạn cần đăng nhập để sử dụng chức năng này!');
-                    // [ĐÃ SỬA]: Gom hàm route() lại thành 1 dòng
-                    window.location.href = '{{ route('login') }}';
-                    return Promise.reject('Unauthorized');
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data && data.success) {
-                    let icon = btnElement.querySelector('i');
-                    let textSpan = btnElement.querySelector('span');
-
-                    if (data.isFavorited) {
-                        icon.classList.remove('fa-regular', 'text-gray-400');
-                        icon.classList.add('fa-solid', 'text-red-500');
-                        if (textSpan) textSpan.innerText = 'Đã lưu';
-                    } else {
-                        icon.classList.remove('fa-solid', 'text-red-500');
-                        icon.classList.add('fa-regular', 'text-gray-400');
-                        if (textSpan) textSpan.innerText = 'Lưu tin';
+                .then(response => {
+                    if (response.status === 401) {
+                        alert('Bạn cần đăng nhập để sử dụng chức năng này!');
+                        // ĐÃ SỬA CÚ PHÁP LỖI Ở ĐÂY 👇
+                        window.location.href = '{{ route("login") }}';
+                        return Promise.reject('Unauthorized');
                     }
-                } else {
-                    console.error('Lỗi từ server:', data);
-                }
-            })
-            .catch(error => console.error('Lỗi kết nối:', error));
+                    return response.json();
+                })
+                .then(data => {
+                    if (data && data.success) {
+                        let icon = btnElement.querySelector('i');
+                        let textSpan = btnElement.querySelector('span');
+
+                        if (data.isFavorited) {
+                            icon.classList.remove('fa-regular', 'text-gray-400');
+                            icon.classList.add('fa-solid', 'text-red-500');
+                            if (textSpan) textSpan.innerText = 'Đã lưu';
+                        } else {
+                            icon.classList.remove('fa-solid', 'text-red-500');
+                            icon.classList.add('fa-regular', 'text-gray-400');
+                            if (textSpan) textSpan.innerText = 'Lưu tin';
+                        }
+                    } else {
+                        console.error('Lỗi từ server:', data);
+                    }
+                })
+                .catch(error => console.error('Lỗi kết nối:', error));
         }
     </script>
 

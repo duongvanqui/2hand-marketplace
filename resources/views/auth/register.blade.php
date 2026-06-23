@@ -1,12 +1,19 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng ký tài khoản - 2HAND</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
     <style>
+        body { font-family: 'Inter', sans-serif !important; }
+        
         /* Hiệu ứng chuyển động nhẹ nhàng cho các khối màu phía sau */
         @keyframes blob {
             0% { transform: translate(0px, 0px) scale(1); }
@@ -26,29 +33,32 @@
     </style>
 </head>
 
-<body class="font-sans antialiased text-gray-900 min-h-screen relative flex flex-col justify-center items-center overflow-x-hidden bg-gray-50 py-10">
+<body class="antialiased text-gray-900 min-h-screen relative flex flex-col justify-center items-center overflow-x-hidden bg-gray-50 py-10">
 
-    {{-- KỸ THUẬT TẠO NỀN KHÔNG CẦN ẢNH --}}
-    <div class="absolute top-0 -left-4 w-96 h-96 bg-green-300 rounded-full mix-blend-multiply filter blur-[80px] opacity-60 animate-blob"></div>
-    <div class="absolute top-0 -right-4 w-96 h-96 bg-emerald-200 rounded-full mix-blend-multiply filter blur-[80px] opacity-60 animate-blob animation-delay-2000"></div>
-    <div class="absolute -bottom-8 left-20 w-96 h-96 bg-teal-200 rounded-full mix-blend-multiply filter blur-[80px] opacity-60 animate-blob animation-delay-4000"></div>
+    {{-- KỸ THUẬT TẠO NỀN KHÔNG CẦN ẢNH ĐÃ ĐƯỢC CHUYỂN SANG TÔNG XANH NGỌC --}}
+    <div class="absolute top-0 -left-4 w-96 h-96 bg-emerald-300 rounded-full mix-blend-multiply filter blur-[80px] opacity-40 animate-blob"></div>
+    <div class="absolute top-0 -right-4 w-96 h-96 bg-teal-200 rounded-full mix-blend-multiply filter blur-[80px] opacity-40 animate-blob animation-delay-2000"></div>
+    <div class="absolute -bottom-8 left-20 w-96 h-96 bg-green-200 rounded-full mix-blend-multiply filter blur-[80px] opacity-40 animate-blob animation-delay-4000"></div>
 
-    {{-- Khối Form Đăng Ký (Glassmorphism) --}}
+    {{-- Khối Form Đăng Ký (Hiệu ứng Kính mờ - Glassmorphism) --}}
     <div class="relative z-10 w-full max-w-md px-4">
-        <div class="bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white p-8 md:p-10">
+        
+        <div class="bg-white/80 backdrop-blur-xl rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white p-8 md:p-10">
             
-            {{-- Logo Brand --}}
-            <div class="text-center mb-6">
-                <a href="{{ url('/') }}" class="inline-flex flex-col items-center justify-center">
-                    <div class="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-xl mb-2 shadow-sm border border-green-200">
+            {{-- ĐÃ SỬA: Logo Brand đồng bộ 100% với hệ thống --}}
+            <div class="text-center mb-8">
+                <a href="{{ url('/') }}" class="inline-flex flex-col items-center justify-center group outline-none">
+                    <div class="w-16 h-16 bg-gradient-to-br from-emerald-400 to-green-600 rounded-2xl flex items-center justify-center text-white text-3xl mb-3 shadow-lg shadow-emerald-200/50 transform transition-transform group-hover:scale-110 group-hover:rotate-3">
                         <i class="fa-solid fa-user-plus"></i>
                     </div>
-                    <span class="text-2xl font-black text-green-700 tracking-tighter uppercase">2HAND</span>
+                    <span class="text-4xl font-black text-gray-900 tracking-tighter uppercase">
+                        2<span class="text-emerald-500">HAND</span>
+                    </span>
                 </a>
-                <p class="text-gray-500 text-sm mt-1 font-medium">Tạo tài khoản để bắt đầu mua bán!</p>
+                <p class="text-gray-500 text-sm mt-3 font-medium">Tạo tài khoản để bắt đầu mua bán!</p>
             </div>
 
-            <form method="POST" action="{{ route('register') }}" class="space-y-4">
+            <form method="POST" action="{{ route('register') }}" class="space-y-5">
                 @csrf
 
                 {{-- Name --}}
@@ -60,10 +70,10 @@
                         </div>
                         <input id="name" type="text" name="name" value="{{ old('name') }}" required autofocus autocomplete="name" 
                                placeholder="Nhập họ và tên của bạn"
-                               class="w-full pl-11 pr-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all font-medium text-gray-900 placeholder-gray-400">
+                               class="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all font-medium text-gray-900 placeholder-gray-400 shadow-sm">
                     </div>
                     @error('name')
-                        <p class="text-red-500 text-xs font-medium mt-1.5 ml-1"><i class="fa-solid fa-circle-exclamation mr-1"></i>{{ $message }}</p>
+                        <p class="text-red-500 text-xs font-bold mt-1.5 ml-1 flex items-center gap-1"><i class="fa-solid fa-circle-exclamation"></i>{{ $message }}</p>
                     @enderror
                 </div>
 
@@ -76,10 +86,10 @@
                         </div>
                         <input id="email" type="email" name="email" value="{{ old('email') }}" required autocomplete="username" 
                                placeholder="nhapemail@gmail.com"
-                               class="w-full pl-11 pr-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all font-medium text-gray-900 placeholder-gray-400">
+                               class="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all font-medium text-gray-900 placeholder-gray-400 shadow-sm">
                     </div>
                     @error('email')
-                        <p class="text-red-500 text-xs font-medium mt-1.5 ml-1"><i class="fa-solid fa-circle-exclamation mr-1"></i>{{ $message }}</p>
+                        <p class="text-red-500 text-xs font-bold mt-1.5 ml-1 flex items-center gap-1"><i class="fa-solid fa-circle-exclamation"></i>{{ $message }}</p>
                     @enderror
                 </div>
 
@@ -92,10 +102,10 @@
                         </div>
                         <input id="password" type="password" name="password" required autocomplete="new-password" 
                                placeholder="••••••••"
-                               class="w-full pl-11 pr-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all font-medium text-gray-900 placeholder-gray-400">
+                               class="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all font-medium text-gray-900 placeholder-gray-400 shadow-sm">
                     </div>
                     @error('password')
-                        <p class="text-red-500 text-xs font-medium mt-1.5 ml-1"><i class="fa-solid fa-circle-exclamation mr-1"></i>{{ $message }}</p>
+                        <p class="text-red-500 text-xs font-bold mt-1.5 ml-1 flex items-center gap-1"><i class="fa-solid fa-circle-exclamation"></i>{{ $message }}</p>
                     @enderror
                 </div>
 
@@ -108,25 +118,25 @@
                         </div>
                         <input id="password_confirmation" type="password" name="password_confirmation" required autocomplete="new-password" 
                                placeholder="••••••••"
-                               class="w-full pl-11 pr-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all font-medium text-gray-900 placeholder-gray-400">
+                               class="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all font-medium text-gray-900 placeholder-gray-400 shadow-sm">
                     </div>
                     @error('password_confirmation')
-                        <p class="text-red-500 text-xs font-medium mt-1.5 ml-1"><i class="fa-solid fa-circle-exclamation mr-1"></i>{{ $message }}</p>
+                        <p class="text-red-500 text-xs font-bold mt-1.5 ml-1 flex items-center gap-1"><i class="fa-solid fa-circle-exclamation"></i>{{ $message }}</p>
                     @enderror
                 </div>
 
-                {{-- Nút Đăng ký --}}
-                <div class="pt-4">
-                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-green-200 transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wide">
+                {{-- Nút Đăng ký Gradient --}}
+                <div class="pt-3">
+                    <button type="submit" class="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-200 transform hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wider">
                         Đăng ký tài khoản <i class="fa-solid fa-user-check"></i>
                     </button>
                 </div>
             </form>
 
             {{-- Đã có tài khoản? --}}
-            <div class="mt-6 pt-5 border-t border-gray-200/60 text-center">
-                <p class="text-sm text-gray-600 font-medium">Đã có tài khoản? 
-                    <a href="{{ route('login') }}" class="text-green-600 font-bold hover:text-green-800 hover:underline transition ml-1">Đăng nhập ngay</a>
+            <div class="mt-8 pt-6 border-t border-gray-100 text-center">
+                <p class="text-sm text-gray-500 font-medium">Đã có tài khoản? 
+                    <a href="{{ route('login') }}" class="text-emerald-600 font-black hover:text-emerald-700 hover:underline transition ml-1">Đăng nhập ngay</a>
                 </p>
             </div>
             

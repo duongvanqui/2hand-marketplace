@@ -2,10 +2,25 @@
 
 @section('title', 'Quản lý đơn hàng - 2HAND')
 
-@section('header_title', 'Quản lý đơn hàng')
+{{-- THANH BREADCRUMB ĐIỀU HƯỚNG --}}
+@section('header_title')
+<div class="flex flex-col">
+    <span class="text-2xl font-black text-gray-900 tracking-tight">
+        Quản lý đơn hàng
+    </span>
+    <div class="text-sm text-gray-500 font-medium mt-1 flex items-center gap-2">
+        <a href="{{ url('/') }}" class="hover:text-emerald-600 transition-colors">Trang chủ</a>
+        <i class="fa-solid fa-angle-right text-[10px] text-gray-400 mx-1"></i>
+        <a href="{{ route('dashboard') }}" class="hover:text-emerald-600 transition-colors">Quản lý cá nhân</a>
+        <i class="fa-solid fa-angle-right text-[10px] text-gray-400 mx-1"></i>
+        <span class="text-gray-900 font-bold">Đơn hàng</span>
+    </div>
+</div>
+@endsection
 
 @section('content')
-<div x-data="{ tab: 'buying' }" class="pb-10">
+{{-- LƯU TAB VÀO URL ĐỂ KHÔNG BỊ NHẢY KHI F5 --}}
+<div x-data="{ tab: new URLSearchParams(location.search).get('tab') || 'buying' }" class="pb-10">
 
     {{-- HIỂN THỊ THÔNG BÁO --}}
     @if(session('success'))
@@ -23,12 +38,12 @@
 
     {{-- THANH CHUYỂN TAB HIỆN ĐẠI --}}
     <div class="flex p-1.5 space-x-2 bg-gray-100/80 rounded-2xl w-fit mb-8 border border-gray-200/60 shadow-inner">
-        <button @click="tab = 'buying'" 
+        <button @click="tab = 'buying'; window.history.replaceState(null, null, '?tab=buying')" 
                 :class="tab === 'buying' ? 'bg-white text-emerald-600 shadow-sm border-gray-100' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-200/50 border-transparent'" 
                 class="px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300 flex items-center gap-2 border">
             <i class="fa-solid fa-bag-shopping text-lg"></i> Đơn mua ({{ count($buyingOrders) }})
         </button>
-        <button @click="tab = 'selling'" 
+        <button @click="tab = 'selling'; window.history.replaceState(null, null, '?tab=selling')" 
                 :class="tab === 'selling' ? 'bg-white text-emerald-600 shadow-sm border-gray-100' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-200/50 border-transparent'" 
                 class="px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300 flex items-center gap-2 border">
             <i class="fa-solid fa-store text-lg"></i> Đơn bán ({{ count($sellingOrders) }})
@@ -50,29 +65,42 @@
                             {{ substr($order->seller->name ?? 'S', 0, 1) }}
                         </div>
                         <span class="font-bold text-gray-800 text-sm">{{ $order->seller->name ?? 'Người bán ẩn danh' }}</span>
-                        <a href="#" class="text-[10px] font-semibold bg-white border border-gray-200 text-gray-600 px-2.5 py-1 rounded-lg hover:text-emerald-600 hover:border-emerald-300 transition flex items-center gap-1 shadow-sm">
+                        
+                        @if($order->seller_id)
+                        <a href="{{ route('shop.show', $order->seller_id) }}" class="text-[10px] font-semibold bg-white border border-gray-200 text-gray-600 px-2.5 py-1 rounded-lg hover:text-emerald-600 hover:border-emerald-300 transition flex items-center gap-1 shadow-sm">
                             <i class="fa-solid fa-store"></i> Xem shop
                         </a>
+                        @endif
                     </div>
                     
                     <div class="flex flex-col items-end gap-1.5">
-                        {{-- Badge Trạng thái --}}
-                        <div>
+                        {{-- FIX LỖI TAILWIND CLASS ĐỘNG --}}
+                        @php
+                            $badgeClass = match($order->status) {
+                                'pending_shipping', 'paid_escrow' => 'bg-orange-50 text-orange-600 border-orange-100',
+                                'shipped'   => 'bg-blue-50 text-blue-600 border-blue-100',
+                                'completed' => 'bg-emerald-50 text-emerald-600 border-emerald-100',
+                                'rejected'  => 'bg-red-50 text-red-600 border-red-100',
+                                default     => 'bg-gray-50 text-gray-600 border-gray-100',
+                            };
+                        @endphp
+                        <span class="{{ $badgeClass }} text-xs font-bold px-3 py-1.5 rounded-lg border flex items-center gap-1.5">
                             @if($order->status === 'pending_shipping' || $order->status === 'paid_escrow')
-                                <span class="bg-orange-50 text-orange-600 text-xs font-bold px-3 py-1.5 rounded-lg border border-orange-100 flex items-center gap-1.5"><i class="fa-solid fa-box-open"></i> Chờ đóng gói</span>
+                                <i class="fa-solid fa-box-open"></i> Chờ đóng gói
                             @elseif($order->status === 'shipped')
-                                <span class="bg-blue-50 text-blue-600 text-xs font-bold px-3 py-1.5 rounded-lg border border-blue-100 flex items-center gap-1.5"><i class="fa-solid fa-truck-fast"></i> Đang giao hàng</span>
+                                <i class="fa-solid fa-truck-fast"></i> Đang giao hàng
                             @elseif($order->status === 'completed')
-                                <span class="bg-emerald-50 text-emerald-600 text-xs font-bold px-3 py-1.5 rounded-lg border border-emerald-100 flex items-center gap-1.5"><i class="fa-solid fa-check-double"></i> Đã hoàn tất</span>
+                                <i class="fa-solid fa-check-double"></i> Đã hoàn tất
                             @elseif($order->status === 'rejected')
-                                <span class="bg-red-50 text-red-600 text-xs font-bold px-3 py-1.5 rounded-lg border border-red-100 flex items-center gap-1.5"><i class="fa-solid fa-xmark"></i> Đã từ chối nhận</span>
+                                <i class="fa-solid fa-xmark"></i> Đã từ chối nhận
+                            @else
+                                <i class="fa-solid fa-circle-info"></i> Không xác định
                             @endif
-                        </div>
+                        </span>
                         
                         {{-- Text Thời gian --}}
                         <div class="text-[11px] text-gray-500 font-medium flex items-center gap-2">
                             <span>Đặt hàng: {{ $order->created_at->format('H:i - d/m/Y') }}</span>
-                            
                             @if($order->status === 'shipped')
                                 <span class="text-gray-300">•</span>
                                 <span class="text-blue-500"><i class="fa-solid fa-truck-fast"></i> Đã gửi: {{ $order->updated_at->format('H:i - d/m/Y') }}</span>
@@ -136,7 +164,7 @@
                         </form>
 
                         {{-- MODAL CHỌN LÝ DO TỪ CHỐI --}}
-                        <div x-show="openRejectModal" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" x-transition.opacity>
+                        <div x-show="openRejectModal" style="display: none;" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" x-transition.opacity>
                             <div @click.away="openRejectModal = false" class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all" x-show="openRejectModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100">
                                 
                                 <div class="bg-red-50 px-6 py-4 border-b border-red-100 flex justify-between items-center">
@@ -269,13 +297,13 @@
                 <div class="w-28 h-28 bg-gray-50 rounded-full flex items-center justify-center mb-6 border-4 border-white shadow-inner">
                     <i class="fa-solid fa-bag-shopping text-5xl text-gray-300"></i>
                 </div>
-                <h3 class="text-lg font-black text-gray-800 mb-2">Chưa có đơn hàng nào</h3>
+                <h3 class="text-lg font-black text-gray-800 mb-2">Chưa có đơn mua</h3>
                 <p class="text-gray-500 font-medium mb-6">Bạn chưa thực hiện giao dịch mua hàng nào trên 2HAND.</p>
                 <a href="{{ url('/') }}" class="bg-emerald-600 text-white font-bold px-8 py-3 rounded-xl hover:bg-emerald-700 transition-colors shadow-md shadow-emerald-200">
                     Bắt đầu mua sắm ngay
                 </a>
             </div>
-        @endempty
+        @endforelse
     </div>
 
     {{-- ============================================== --}}

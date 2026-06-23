@@ -1,7 +1,22 @@
 @extends('layouts.admin')
 
 @section('title', 'Tin đã lưu - 2HAND')
-@section('header_title', 'Tin đã lưu (Yêu thích)')
+
+{{-- ĐÃ SỬA: Thêm Breadcrumb (Thanh điều hướng) lấp chỗ trống --}}
+@section('header_title')
+<div class="flex flex-col">
+    <span class="text-2xl font-black text-gray-900 tracking-tight">
+        Tin đã lưu (Yêu thích)
+    </span>
+    <div class="text-sm text-gray-500 font-medium mt-1 flex items-center gap-2">
+        <a href="{{ url('/') }}" class="hover:text-emerald-600 transition-colors">Trang chủ</a>
+        <i class="fa-solid fa-angle-right text-[10px] text-gray-400 mx-1"></i>
+        <a href="{{ route('dashboard') }}" class="hover:text-emerald-600 transition-colors">Quản lý cá nhân</a>
+        <i class="fa-solid fa-angle-right text-[10px] text-gray-400 mx-1"></i>
+        <span class="text-gray-900 font-bold">Tin đã lưu</span>
+    </div>
+</div>
+@endsection
 
 @section('content')
 <div class="pb-10">
@@ -17,26 +32,28 @@
                 </button>
 
                 <a href="{{ route('products.show', $product->slug) }}" class="block">
-                    <div class="w-full aspect-[4/3] bg-gray-50 flex items-center justify-center overflow-hidden border-b border-gray-50">
+                    <div class="w-full aspect-[4/3] bg-gray-50 flex items-center justify-center overflow-hidden border-b border-gray-50 relative">
                         @if($product->images && $product->images->count() > 0)
-                            <img src="{{ asset('storage/' . $product->images->first()->image_path) }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+                            <img src="{{ asset('storage/' . $product->images->first()->image_path) }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
                         @else
                             <div class="text-center text-gray-300">
                                 <i class="fa-regular fa-image text-4xl mb-1 block"></i>
                             </div>
                         @endif
+                        {{-- Overlay đen mờ khi hover --}}
+                        <div class="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     </div>
                 </a>
 
                 <div class="p-4 flex flex-col flex-grow">
-                    <h3 class="text-sm font-semibold text-gray-800 line-clamp-2 mb-2 group-hover:text-green-600 transition-colors">
+                    <h3 class="text-sm font-semibold text-gray-800 line-clamp-2 mb-2 group-hover:text-emerald-600 transition-colors leading-snug">
                         <a href="{{ route('products.show', $product->slug) }}">{{ $product->title }}</a>
                     </h3>
-                    <div class="mt-auto">
-                        <p class="text-lg font-black text-red-600 mb-2">{{ number_format($product->price, 0, ',', '.') }} đ</p>
+                    <div class="mt-auto border-t border-gray-50 pt-3">
+                        <p class="text-lg font-black text-red-600 mb-2">{{ number_format($product->price, 0, ',', '.') }}<span class="text-sm underline ml-0.5">đ</span></p>
                         <div class="flex items-center justify-between text-[11px] text-gray-500 font-medium">
-                            <span class="flex items-center gap-1"><i class="fa-solid fa-location-dot"></i> {{ $product->location ?? 'Toàn quốc' }}</span>
-                            <span class="bg-gray-100 px-2 py-0.5 rounded text-gray-600">{{ $product->created_at->diffForHumans() }}</span>
+                            <span class="flex items-center gap-1.5 truncate max-w-[60%]"><i class="fa-solid fa-location-dot text-gray-400"></i> {{ $product->location ?? 'Toàn quốc' }}</span>
+                            <span class="bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-md text-gray-600 whitespace-nowrap">{{ $product->created_at->diffForHumans() }}</span>
                         </div>
                     </div>
                 </div>
@@ -48,14 +65,14 @@
             {{ $favorites->links() }}
         </div>
     @else
-        <div class="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm flex flex-col items-center">
+        <div class="text-center py-20 bg-white rounded-[2rem] border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col items-center">
             <div class="w-28 h-28 bg-red-50 rounded-full flex items-center justify-center mb-6 border-4 border-white shadow-inner">
                 <i class="fa-solid fa-heart-crack text-5xl text-red-300"></i>
             </div>
-            <h3 class="text-lg font-black text-gray-800 mb-2">Chưa có tin lưu nào</h3>
+            <h3 class="text-xl font-black text-gray-800 mb-2">Chưa có tin lưu nào</h3>
             <p class="text-gray-500 font-medium mb-6">Bạn chưa "thả tim" bất kỳ sản phẩm nào trên hệ thống.</p>
-            <a href="{{ url('/') }}" class="bg-green-600 text-white font-bold px-8 py-3 rounded-xl hover:bg-green-700 transition-colors shadow-md shadow-green-200">
-                Khám phá ngay
+            <a href="{{ url('/') }}" class="bg-emerald-600 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-emerald-700 transition-all shadow-md shadow-emerald-200 transform hover:-translate-y-0.5 flex items-center gap-2">
+                <i class="fa-solid fa-compass"></i> Khám phá ngay
             </a>
         </div>
     @endif

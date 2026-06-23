@@ -16,22 +16,21 @@
 </div>
 @endsection
 
-{{-- Nút hành động trích xuất file PDF báo cáo --}}
+{{-- Nút hành động trích xuất file --}}
 @section('header_actions')
-<a href="{{ route('admin.dashboard.export', ['days' => request('days', 7)]) }}" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-200/50 flex items-center gap-2 transform hover:-translate-y-0.5 whitespace-nowrap">
-    <i class="fa-solid fa-file-pdf"></i> Xuất báo cáo PDF
-</a>
+<button type="button" onclick="openModal('modal-export')" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-200/50 flex items-center gap-2 transform hover:-translate-y-0.5 whitespace-nowrap">
+    <i class="fa-solid fa-file-export"></i> Xuất báo cáo
+</button>
 @endsection
 
 @section('content')
 <div class="pb-10">
     
     {{-- ========================================== --}}
-    {{-- 1. KHỐI THẺ THỐNG KÊ (BẢN REDESIGN 3 CỘT THOÁNG ĐÃNG) --}}
+    {{-- 1. KHỐI THẺ THỐNG KÊ (3 CỘT THOÁNG ĐÃNG) --}}
     {{-- ========================================== --}}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         
-        {{-- Thẻ: Tổng người dùng --}}
         <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition-all group flex justify-between items-center">
             <div>
                 <p class="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wide">Tổng người dùng</p>
@@ -45,7 +44,6 @@
             </div>
         </div>
 
-        {{-- Thẻ: Tổng sản phẩm --}}
         <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition-all group flex justify-between items-center">
             <div>
                 <p class="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wide">Tổng sản phẩm</p>
@@ -59,7 +57,6 @@
             </div>
         </div>
 
-        {{-- Thẻ: Sản phẩm chờ duyệt --}}
         <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition-all group flex justify-between items-center">
             <div>
                 <p class="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wide">SP chờ duyệt</p>
@@ -73,7 +70,6 @@
             </div>
         </div>
 
-        {{-- Thẻ: Tổng đơn hàng --}}
         <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition-all group flex justify-between items-center">
             <div>
                 <p class="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wide">Tổng đơn hàng</p>
@@ -87,7 +83,6 @@
             </div>
         </div>
 
-        {{-- Thẻ: Doanh thu phí sàn --}}
         <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition-all group flex justify-between items-center">
             <div>
                 <p class="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wide">Doanh thu phí sàn (3%)</p>
@@ -101,7 +96,6 @@
             </div>
         </div>
 
-        {{-- Thẻ: Báo cáo vi phạm --}}
         <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition-all group flex justify-between items-center relative">
             @if(isset($unresolvedReports) && $unresolvedReports > 0)
                 <span class="absolute top-5 right-5 flex h-3 w-3">
@@ -128,14 +122,13 @@
     {{-- ========================================== --}}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         
-        {{-- Sơ đồ Doanh thu --}}
         <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col h-[350px]">
             <div class="flex justify-between items-center mb-6 border-b border-gray-50 pb-4">
                 <h3 class="font-bold text-gray-800">Doanh thu</h3>
                 <select onchange="window.location.href='?days=' + this.value" class="text-xs font-medium text-gray-600 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-200 outline-none cursor-pointer">
-                    <option value="7" {{ $days == 7 ? 'selected' : '' }}>7 ngày qua</option>
-                    <option value="30" {{ $days == 30 ? 'selected' : '' }}>30 ngày qua</option>
-                    <option value="365" {{ $days == 365 ? 'selected' : '' }}>1 năm qua</option>
+                    <option value="7" {{ request('days', 7) == 7 ? 'selected' : '' }}>7 ngày qua</option>
+                    <option value="30" {{ request('days') == 30 ? 'selected' : '' }}>30 ngày qua</option>
+                    <option value="365" {{ request('days') == 365 ? 'selected' : '' }}>1 năm qua</option>
                 </select>
             </div>
             <div class="flex-1 min-h-0 relative">
@@ -149,14 +142,13 @@
             </div>
         </div>
 
-        {{-- Sơ đồ Đơn hàng --}}
         <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col h-[350px]">
             <div class="flex justify-between items-center mb-6 border-b border-gray-50 pb-4">
                 <h3 class="font-bold text-gray-800">Đơn hàng</h3>
                 <select onchange="window.location.href='?days=' + this.value" class="text-xs font-medium text-gray-600 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-200 outline-none cursor-pointer">
-                    <option value="7" {{ $days == 7 ? 'selected' : '' }}>7 ngày qua</option>
-                    <option value="30" {{ $days == 30 ? 'selected' : '' }}>30 ngày qua</option>
-                    <option value="365" {{ $days == 365 ? 'selected' : '' }}>1 năm qua</option>
+                    <option value="7" {{ request('days', 7) == 7 ? 'selected' : '' }}>7 ngày qua</option>
+                    <option value="30" {{ request('days') == 30 ? 'selected' : '' }}>30 ngày qua</option>
+                    <option value="365" {{ request('days') == 365 ? 'selected' : '' }}>1 năm qua</option>
                 </select>
             </div>
             <div class="flex-1 min-h-0 relative">
@@ -170,14 +162,13 @@
             </div>
         </div>
 
-        {{-- Sơ đồ Tài khoản & Sản phẩm --}}
         <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col h-[350px]">
             <div class="flex justify-between items-center mb-6 border-b border-gray-50 pb-4">
                 <h3 class="font-bold text-gray-800">Tài khoản & SP Mới</h3>
                 <select onchange="window.location.href='?days=' + this.value" class="text-xs font-medium text-gray-600 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-200 outline-none cursor-pointer">
-                    <option value="7" {{ $days == 7 ? 'selected' : '' }}>7 ngày qua</option>
-                    <option value="30" {{ $days == 30 ? 'selected' : '' }}>30 ngày qua</option>
-                    <option value="365" {{ $days == 365 ? 'selected' : '' }}>1 năm qua</option>
+                    <option value="7" {{ request('days', 7) == 7 ? 'selected' : '' }}>7 ngày qua</option>
+                    <option value="30" {{ request('days') == 30 ? 'selected' : '' }}>30 ngày qua</option>
+                    <option value="365" {{ request('days') == 365 ? 'selected' : '' }}>1 năm qua</option>
                 </select>
             </div>
             <div class="flex-1 min-h-0 relative">
@@ -198,7 +189,7 @@
     {{-- ========================================== --}}
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
         
-        {{-- Cột 1: Sản phẩm chờ duyệt --}}
+        {{-- Cột 1: Sản phẩm chờ duyệt (Đã FIX lỗi hiển thị ảnh) --}}
         <div class="bg-white rounded-3xl shadow-sm border border-gray-100 flex flex-col overflow-hidden">
             <div class="p-5 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
                 <h3 class="font-bold text-gray-800 flex items-center gap-2">Sản phẩm chờ duyệt <span class="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">{{ count($recentPendingProducts ?? []) }}</span></h3>
@@ -208,8 +199,8 @@
                 @forelse($recentPendingProducts ?? [] as $product)
                 <div class="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-2xl transition border border-transparent hover:border-gray-100 group">
                     <div class="w-12 h-12 rounded-xl bg-gray-100 shrink-0 border border-gray-200 overflow-hidden flex items-center justify-center">
-                        @if($product->images && count(json_decode($product->images)) > 0)
-                            <img src="{{ asset('storage/' . json_decode($product->images)[0]) }}" class="w-full h-full object-cover">
+                        @if($product->images && $product->images->count() > 0)
+                            <img src="{{ asset('storage/' . $product->images->first()->image_path) }}" class="w-full h-full object-cover">
                         @else
                             <i class="fa-solid fa-box text-gray-400"></i>
                         @endif
@@ -246,7 +237,6 @@
                     </div>
                     <div class="flex-1 min-w-0">
                         <h4 class="text-sm font-bold text-gray-800 truncate">#DH{{ str_pad($order->id, 5, '0', STR_PAD_LEFT) }}</h4>
-                        {{-- FIX: Đã gọi đúng quan hệ $order->buyer->name --}}
                         <p class="text-[11px] text-gray-500 truncate mt-0.5">Người mua: {{ $order->buyer->name ?? 'N/A' }}</p>
                     </div>
                     <div class="text-right shrink-0">
@@ -293,15 +283,106 @@
         </div>
 
     </div>
+
+    {{-- ========================================== --}}
+    {{-- MODAL TRÍCH XUẤT BÁO CÁO (CHỈ XUẤT PDF TỔNG QUAN) --}}
+    {{-- ========================================== --}}
+    <div id="modal-export" class="fixed inset-0 z-[100] hidden bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4 transition-all duration-300">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-[420px] w-full overflow-hidden flex flex-col transform transition-transform">
+            
+            <div class="px-6 py-5 flex items-center justify-between border-b border-gray-100">
+                <h3 class="text-base font-black text-gray-800 flex items-center gap-2">
+                    <i class="fa-solid fa-file-export text-blue-600"></i> Trích xuất Báo cáo tổng quan
+                </h3>
+                <button type="button" onclick="closeModal('modal-export')" class="text-gray-400 hover:text-gray-600 transition-colors bg-gray-50 hover:bg-gray-100 w-8 h-8 rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <form action="{{ route('admin.dashboard.export') }}" method="GET" class="p-6">
+                
+                {{-- Đồng bộ tham số 'days' ngầm với bộ lọc hiện tại trên web --}}
+                <input type="hidden" name="days" value="{{ request('days', 7) }}">
+
+                {{-- Khung thời gian (Hiển thị Readonly) --}}
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Từ ngày</label>
+                        <input type="date" value="{{ now()->subDays(request('days', 7))->format('Y-m-d') }}" class="w-full px-4 py-2.5 border border-gray-200 bg-gray-50 rounded-xl text-sm text-gray-500 focus:outline-none transition-colors cursor-not-allowed" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Đến ngày</label>
+                        <input type="date" value="{{ now()->format('Y-m-d') }}" class="w-full px-4 py-2.5 border border-gray-200 bg-gray-50 rounded-xl text-sm text-gray-500 focus:outline-none transition-colors cursor-not-allowed" readonly>
+                    </div>
+                </div>
+
+                {{-- Dữ liệu xuất (Khóa cố định 1 tùy chọn) --}}
+                <div class="mb-5">
+                    <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Dữ liệu xuất</label>
+                    <select name="report_type" class="w-full px-4 py-2.5 border border-gray-200 bg-gray-50 rounded-xl text-sm text-gray-700 font-bold focus:outline-none cursor-not-allowed pointer-events-none" readonly>
+                        <option value="all">Tất cả thống kê tổng quan</option>
+                    </select>
+                </div>
+
+                {{-- Định dạng file --}}
+                <div class="mb-8">
+                    <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Định dạng file</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        
+                        {{-- Nút Excel: Bị làm mờ và khóa click --}}
+                        <label class="flex items-center gap-3 p-3 border border-gray-200 bg-gray-50 rounded-xl cursor-not-allowed opacity-50" title="Định dạng Excel không khả dụng cho Báo cáo này">
+                            <input type="radio" name="format" value="excel" disabled class="w-4 h-4 text-gray-400 border-gray-300 mt-0.5 cursor-not-allowed">
+                            <div class="flex items-center gap-1.5 grayscale">
+                                <i class="fa-solid fa-file-excel text-gray-500 text-lg"></i>
+                                <span class="font-bold text-gray-400 text-sm line-through">Excel</span>
+                            </div>
+                        </label>
+
+                        {{-- Nút PDF: Được chọn mặc định --}}
+                        <label class="flex items-center gap-3 p-3 border border-blue-500 bg-blue-50/50 rounded-xl cursor-pointer transition-all">
+                            <input type="radio" name="format" value="pdf" checked class="w-4 h-4 text-blue-600 border-blue-300 focus:ring-blue-500 mt-0.5 pointer-events-none">
+                            <div class="flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-pdf text-red-600 text-lg"></i>
+                                <span class="font-bold text-gray-700 text-sm">PDF</span>
+                            </div>
+                        </label>
+
+                    </div>
+                </div>
+
+                {{-- Footer Modal --}}
+                <div class="flex justify-between gap-3 pt-2">
+                    <button type="button" onclick="closeModal('modal-export')" class="w-1/3 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-sm transition-colors">
+                        Hủy
+                    </button>
+                    <button type="submit" onclick="setTimeout(() => closeModal('modal-export'), 800)" class="w-2/3 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition-all shadow-md shadow-blue-200 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-download"></i> Tải xuống PDF
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 </div>
 @endsection
 
 {{-- ========================================== --}}
-{{-- SCRIPT ĐIỀU KHIỂN BIỂU ĐỒ CHART.JS (ĐÃ FIX LỖI) --}}
+{{-- SCRIPT ĐIỀU KHIỂN BIỂU ĐỒ (ĐỪNG XÓA KHÚC NÀY NHÉ) --}}
 {{-- ========================================== --}}
 @section('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    // Hàm mở/đóng Modal xuất báo cáo
+    function openModal(id) { 
+        document.getElementById(id).classList.remove('hidden'); 
+        document.body.style.overflow = 'hidden'; 
+    }
+    function closeModal(id) { 
+        document.getElementById(id).classList.add('hidden'); 
+        document.body.style.overflow = 'auto'; 
+    }
+
+    // Biến nhận dữ liệu từ Controller
     const chartLabels = {!! json_encode($chartLabels ?? []) !!};
     const revenueData = {!! json_encode($revenueData ?? []) !!};
     const ordersData  = {!! json_encode($ordersData ?? []) !!};
@@ -309,13 +390,11 @@
 
     const currencyFormat = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
 
-    // Định hình cấu trúc khung đồ thị chung (BẬT LẠI TRỤC DỌC Y)
+    // Khung biểu đồ dùng chung
     const commonOptions = {
         responsive: true, 
         maintainAspectRatio: false,
-        plugins: { 
-            legend: { display: false } // Tắt ô tiêu đề thừa gây lỗi undefined
-        },
+        plugins: { legend: { display: false } },
         scales: { 
             x: { 
                 grid: { display: false }, 
@@ -327,12 +406,11 @@
                 grid: { borderDash: [4, 4], color: '#f3f4f6' }, 
                 border: { display: false },
                 ticks: { 
-                    display: true, // BẬT LẠI TRỤC DỌC SỐ
+                    display: true,
                     font: { size: 10, family: 'sans-serif' },
                     color: '#9ca3af',
                     maxTicksLimit: 5,
                     callback: function(value) {
-                        // Rút gọn con số cho sơ đồ thoáng đãng (Tr: Triệu, K: Ngàn)
                         if (value >= 1000000) return (value / 1000000) + ' Tr';
                         if (value >= 1000) return (value / 1000) + ' K';
                         return value;
@@ -343,7 +421,7 @@
         interaction: { intersect: false, mode: 'index' }
     };
 
-    // 1. Chart nét cong Doanh Thu
+    // 1. Biểu đồ Doanh Thu
     if(document.getElementById('revenueChart')) {
         new Chart(document.getElementById('revenueChart'), {
             type: 'line',
@@ -355,8 +433,8 @@
                     borderColor: '#3b82f6', 
                     backgroundColor: 'rgba(59, 130, 246, 0.08)', 
                     borderWidth: 3, 
-                    tension: 0.4, // Làm mượt nét cong
-                    fill: true,   // Bật đổ màu nền
+                    tension: 0.4,
+                    fill: true,   
                     pointRadius: 0,
                     pointHoverRadius: 5
                 }]
@@ -365,7 +443,7 @@
         });
     }
 
-    // 2. Chart nét cong Đơn Hàng
+    // 2. Biểu đồ Đơn Hàng
     if(document.getElementById('ordersChart')) {
         new Chart(document.getElementById('ordersChart'), {
             type: 'line',
@@ -387,7 +465,7 @@
         });
     }
 
-    // 3. Chart nét cong Đăng Sản phẩm mới
+    // 3. Biểu đồ Tài khoản & Sản phẩm
     if(document.getElementById('usersChart')) {
         new Chart(document.getElementById('usersChart'), {
             type: 'line',

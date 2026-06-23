@@ -1,10 +1,26 @@
 @extends('layouts.admin')
 
 @section('title', 'Quản lý đánh giá - 2HAND')
-@section('header_title', 'Đánh giá của tôi')
+
+{{-- ĐÃ SỬA: Bổ sung Breadcrumb (Thanh điều hướng) lấp chỗ trống --}}
+@section('header_title')
+<div class="flex flex-col">
+    <span class="text-2xl font-black text-gray-900 tracking-tight">
+        Đánh giá của tôi
+    </span>
+    <div class="text-sm text-gray-500 font-medium mt-1 flex items-center gap-2">
+        <a href="{{ url('/') }}" class="hover:text-emerald-600 transition-colors">Trang chủ</a>
+        <i class="fa-solid fa-angle-right text-[10px] text-gray-400 mx-1"></i>
+        <a href="{{ route('dashboard') }}" class="hover:text-emerald-600 transition-colors">Quản lý cá nhân</a>
+        <i class="fa-solid fa-angle-right text-[10px] text-gray-400 mx-1"></i>
+        <span class="text-gray-900 font-bold">Đánh giá</span>
+    </div>
+</div>
+@endsection
 
 @section('content')
-<div x-data="{ tab: 'received' }" class="pb-10">
+{{-- ĐÃ SỬA UX: Nhớ trạng thái Tab trên URL để không bị nhảy tab khi bấm chuyển trang (Pagination) --}}
+<div x-data="{ tab: new URLSearchParams(location.search).get('tab') || 'received' }" class="pb-10">
 
     {{-- ========================================== --}}
     {{-- 1. KHỐI THỐNG KÊ ĐIỂM UY TÍN (MODERN UI)   --}}
@@ -16,14 +32,15 @@
         <div class="text-center md:border-r-2 md:pr-12 border-gray-50 shrink-0">
             <p class="text-gray-500 text-sm font-bold uppercase tracking-wider mb-2">Điểm uy tín</p>
             <div class="flex items-center justify-center gap-3">
-                <span class="text-6xl font-black text-gray-900 drop-shadow-sm">{{ number_format($averageRating, 1) }}</span>
+                {{-- FIX LỖI: Thêm ?? 0 đề phòng chưa có đánh giá --}}
+                <span class="text-6xl font-black text-gray-900 drop-shadow-sm">{{ number_format($averageRating ?? 0, 1) }}</span>
                 <div class="flex flex-col items-start gap-1 text-yellow-400">
                     <div class="flex text-lg">
                         @for($i=1; $i<=5; $i++)
-                            <i class="{{ $i <= round($averageRating) ? 'fa-solid' : 'fa-regular' }} fa-star drop-shadow-sm"></i>
+                            <i class="{{ $i <= round($averageRating ?? 0) ? 'fa-solid' : 'fa-regular' }} fa-star drop-shadow-sm"></i>
                         @endfor
                     </div>
-                    <span class="text-[11px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md font-bold">{{ $totalReceived }} lượt đánh giá</span>
+                    <span class="text-[11px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md font-bold">{{ $totalReceived ?? 0 }} lượt đánh giá</span>
                 </div>
             </div>
         </div>
@@ -41,12 +58,12 @@
     {{-- 2. THANH CHUYỂN TAB                        --}}
     {{-- ========================================== --}}
     <div class="flex p-1.5 space-x-2 bg-gray-100/80 rounded-2xl w-full md:w-fit mb-8 border border-gray-200/60 shadow-inner overflow-x-auto no-scrollbar">
-        <button @click="tab = 'received'" 
+        <button @click="tab = 'received'; window.history.replaceState(null, null, '?tab=received')" 
                 :class="tab === 'received' ? 'bg-white text-emerald-600 shadow-sm' : 'text-gray-500 hover:text-gray-800'" 
                 class="px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300 flex items-center gap-2 whitespace-nowrap">
             <i class="fa-solid fa-download"></i> Đánh giá nhận được
         </button>
-        <button @click="tab = 'sent'" 
+        <button @click="tab = 'sent'; window.history.replaceState(null, null, '?tab=sent')" 
                 :class="tab === 'sent' ? 'bg-white text-emerald-600 shadow-sm' : 'text-gray-500 hover:text-gray-800'" 
                 class="px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300 flex items-center gap-2 whitespace-nowrap">
             <i class="fa-solid fa-paper-plane"></i> Đánh giá đã gửi
@@ -64,15 +81,15 @@
                 @forelse($receivedReviews as $review)
                     <div class="p-6 md:p-8 hover:bg-gray-50/50 transition-colors">
                         <div class="flex gap-4 md:gap-5">
-                            {{-- Avatar --}}
-                            <div class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-lg shrink-0 border border-emerald-100 shadow-sm">
-                                {{ substr($review->sender->name, 0, 1) }}
+                            {{-- Avatar (ĐÃ FIX LỖI USER BỊ XÓA) --}}
+                            <div class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-lg shrink-0 border border-emerald-100 shadow-sm uppercase">
+                                {{ substr($review->sender->name ?? 'U', 0, 1) }}
                             </div>
                             
                             {{-- Nội dung --}}
                             <div class="flex-1">
                                 <div class="flex justify-between items-start mb-1">
-                                    <h4 class="font-bold text-gray-900 text-base">{{ $review->sender->name }}</h4>
+                                    <h4 class="font-bold text-gray-900 text-base">{{ $review->sender->name ?? 'Người dùng đã xóa' }}</h4>
                                     <span class="text-xs text-gray-400 font-medium flex items-center gap-1"><i class="fa-regular fa-clock"></i> {{ $review->created_at->diffForHumans() }}</span>
                                 </div>
                                 
@@ -129,7 +146,7 @@
                 @endempty
             </div>
             @if($receivedReviews->hasPages())
-                <div class="p-5 border-t border-gray-100 bg-gray-50/50">{{ $receivedReviews->links() }}</div>
+                <div class="p-5 border-t border-gray-100 bg-gray-50/50">{{ $receivedReviews->appends(['tab' => 'received'])->links() }}</div>
             @endif
         </div>
 
@@ -144,10 +161,17 @@
                                 <i class="fa-solid fa-store"></i>
                             </div>
                             
-                            {{-- Nội dung --}}
+                            {{-- Nội dung (ĐÃ FIX LỖI SHOP BỊ XÓA) --}}
                             <div class="flex-1">
                                 <div class="flex justify-between items-start mb-1">
-                                    <h4 class="font-bold text-gray-900 text-base">Đánh giá shop: <a href="{{ route('shop.show', $review->receiver->id) }}" class="text-blue-600 hover:underline">{{ $review->receiver->name }}</a></h4>
+                                    <h4 class="font-bold text-gray-900 text-base">
+                                        Đánh giá shop: 
+                                        @if($review->receiver)
+                                            <a href="{{ route('shop.show', $review->receiver->id) }}" class="text-blue-600 hover:underline">{{ $review->receiver->name }}</a>
+                                        @else
+                                            <span class="text-gray-500 italic">Shop đã ngừng hoạt động</span>
+                                        @endif
+                                    </h4>
                                     <span class="text-xs text-gray-400 font-medium flex items-center gap-1"><i class="fa-regular fa-clock"></i> {{ $review->created_at->diffForHumans() }}</span>
                                 </div>
                                 
@@ -203,7 +227,7 @@
                 @endempty
             </div>
             @if($sentReviews->hasPages())
-                <div class="p-5 border-t border-gray-100 bg-gray-50/50">{{ $sentReviews->links() }}</div>
+                <div class="p-5 border-t border-gray-100 bg-gray-50/50">{{ $sentReviews->appends(['tab' => 'sent'])->links() }}</div>
             @endif
         </div>
 

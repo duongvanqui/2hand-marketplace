@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PageController;
 
 // ==========================================
 // IMPORT CÁC CONTROLLER NGƯỜI DÙNG (USER)
@@ -40,6 +41,18 @@ Route::get('/san-pham/{slug}', [ProductController::class, 'show'])->name('produc
 Route::get('/shop/{id}', [ShopController::class, 'show'])->name('shop.show');
 
 
+// ==========================================
+// CÁC TRANG THÔNG TIN (STATIC PAGES)
+// ==========================================
+Route::prefix('thong-tin')->name('pages.')->group(function () {
+    Route::get('/gioi-thieu', [PageController::class, 'about'])->name('about');
+    Route::get('/quy-che-hoat-dong', [PageController::class, 'regulations'])->name('regulations');
+    Route::get('/chinh-sach-bao-mat', [PageController::class, 'privacy'])->name('privacy');
+    Route::get('/trung-tam-tro-giup', [PageController::class, 'help'])->name('help');
+    Route::get('/mua-ban-an-toan', [PageController::class, 'safeTrading'])->name('safe_trading');
+    Route::get('/thanh-toan-cod', [PageController::class, 'codGuide'])->name('cod_guide');
+});
+
 /*
 |--------------------------------------------------------------------------
 | 2. KHU VỰC NGƯỜI DÙNG (YÊU CẦU ĐĂNG NHẬP)
@@ -59,6 +72,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/dang-tin', [ProductController::class, 'store'])->name('products.store');
     Route::get('/san-pham/{id}/sua', [ProductController::class, 'edit'])->name('products.edit');
     Route::put('/san-pham/{id}/sua', [ProductController::class, 'update'])->name('products.update');
+    // ĐÃ BỔ SUNG ROUTE XÓA SẢN PHẨM Ở ĐÂY 👇
+    Route::delete('/san-pham/{id}', [ProductController::class, 'destroy'])->name('products.destroy');
 
     // --- Hệ thống Thông báo ---
     Route::get('/notifications', function () {

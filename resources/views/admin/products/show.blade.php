@@ -2,15 +2,23 @@
 
 @section('title', 'Chi tiết tin đăng - Admin')
 
-{{-- Tùy chỉnh Header: Gắn luôn nút Back vào cạnh Tiêu đề cho gọn gàng --}}
+{{-- Tùy chỉnh Header: Gắn nút Back và Thanh điều hướng (Breadcrumb) --}}
 @section('header_title')
-<div class="flex items-center gap-4">
-    <a href="{{ route('admin.products.index') }}" class="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-all shadow-sm">
-        <i class="fa-solid fa-arrow-left"></i>
-    </a>
-    <div class="flex flex-col">
+<div class="flex flex-col">
+    <div class="flex items-center gap-3">
+        <a href="{{ route('admin.products.index') }}" class="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all shadow-sm group">
+            <i class="fa-solid fa-arrow-left transition-transform group-hover:-translate-x-0.5"></i>
+        </a>
         <span class="text-2xl font-black text-gray-900 tracking-tight">Chi tiết tin đăng</span>
-        <p class="text-sm text-gray-500 font-medium mt-1">Mã tin: <span class="text-gray-800 font-bold">#SP{{ str_pad($product->id, 5, '0', STR_PAD_LEFT) }}</span></p>
+    </div>
+    
+    {{-- Thanh Breadcrumb mờ mờ chuẩn style --}}
+    <div class="text-sm text-gray-500 font-medium mt-1.5 flex items-center gap-2 pl-[3.25rem]">
+        <a href="{{ route('admin.dashboard') }}" class="hover:text-emerald-600 transition-colors">Trang chủ</a>
+        <i class="fa-solid fa-angle-right text-[10px] text-gray-400 mx-0.5"></i>
+        <a href="{{ route('admin.products.index') }}" class="hover:text-emerald-600 transition-colors">Quản lý Sản phẩm</a>
+        <i class="fa-solid fa-angle-right text-[10px] text-gray-400 mx-0.5"></i>
+        <span class="text-gray-900 font-bold">#SP{{ str_pad($product->id, 5, '0', STR_PAD_LEFT) }}</span>
     </div>
 </div>
 @endsection
@@ -27,6 +35,7 @@
         </button>
     </form>
     @endif
+    
     @if(in_array($product->status, ['pending', 'approved']))
     <button onclick="openModal('modal-reject')"
         class="px-5 py-2.5 bg-white border border-red-200 text-red-600 rounded-xl hover:bg-red-50 text-sm font-bold transition-all shadow-sm flex items-center gap-2">
@@ -115,16 +124,25 @@
                 </h3>
                 
                 @if($product->images && $product->images->count() > 0)
-                    {{-- Grid hiển thị ảnh đẹp mắt: Ảnh đầu tiên to, các ảnh sau nhỏ --}}
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {{-- Grid hiển thị ảnh to/nhỏ --}}
+                    <div class="relative w-full aspect-[4/3] md:aspect-[21/9] bg-gray-50 rounded-2xl overflow-hidden border border-gray-100 flex items-center justify-center mb-3">
+                        <img id="main-display" src="{{ asset('storage/' . $product->images->first()->image_path) }}" class="w-full h-full object-contain">
+                        
+                        @if($product->images->count() > 1)
+                        <button onclick="prevImg()" class="absolute left-3 bg-white/90 text-gray-800 p-2 rounded-full shadow-md hover:text-emerald-600 hover:bg-emerald-50 transition outline-none w-10 h-10">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                        <button onclick="nextImg()" class="absolute right-3 bg-white/90 text-gray-800 p-2 rounded-full shadow-md hover:text-emerald-600 hover:bg-emerald-50 transition outline-none w-10 h-10">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                        @endif
+                    </div>
+
+                    <div class="flex justify-start gap-2 overflow-x-auto py-1 no-scrollbar">
                         @foreach($product->images as $index => $img)
-                            <div class="{{ $index === 0 ? 'col-span-2 md:col-span-4 aspect-[21/9] md:aspect-[3/1]' : 'aspect-square' }} rounded-2xl overflow-hidden border border-gray-200 shadow-sm relative group cursor-pointer">
-                                <img src="{{ asset('storage/' . $img->image_path) }}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
-                                @if($index === 0)
-                                    <div class="absolute top-3 left-3 bg-black/50 backdrop-blur text-white text-[10px] font-bold px-3 py-1.5 rounded-lg border border-white/20">
-                                        Ảnh bìa
-                                    </div>
-                                @endif
+                            <div class="flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 cursor-pointer transition-all thumb-item {{ $index === 0 ? 'border-emerald-500 ring-2 ring-emerald-100 opacity-100' : 'border-transparent opacity-50 hover:opacity-100' }}"
+                                onclick="changeImage('{{ asset('storage/' . $img->image_path) }}', this, {{ $index }})">
+                                <img src="{{ asset('storage/' . $img->image_path) }}" class="w-full h-full object-cover">
                             </div>
                         @endforeach
                     </div>
@@ -275,7 +293,7 @@
                         
                         <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 text-xs text-gray-600 space-y-1.5">
                             <p><span class="text-gray-400">Người duyệt:</span> <span class="font-bold text-gray-800">{{ $product->reviewer->name ?? 'Admin hệ thống' }}</span></p>
-                            <p><span class="text-gray-400">Kết quả:</span> <span class="font-bold {{ $product->status === 'approved' ? 'text-green-600' : 'text-red-600' }}">{{ $labels[$product->status] ?? $product->status }}</span></p>
+                            <p><span class="text-gray-400">Kết quả:</span> <span class="font-bold {{ $product->status === 'approved' ? 'text-green-600' : 'text-red-600' }}">{{ $product->status === 'approved' ? 'Đã duyệt hiển thị' : 'Đã từ chối/Khóa' }}</span></p>
                         </div>
                     </div>
                 </div>
@@ -297,7 +315,7 @@
 </div>
 
 {{-- ========================================== --}}
-{{-- MODALS TƯƠNG TÁC (CHUẨN GIAO DIỆN MỚI) --}}
+{{-- MODALS TƯƠNG TÁC --}}
 {{-- ========================================== --}}
 
 {{-- 1. Modal: Từ chối tin --}}
@@ -305,7 +323,7 @@
     <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col transform transition-all">
         <div class="p-6 border-b border-gray-100 bg-red-50/30 flex justify-between items-center">
             <h3 class="text-xl font-black text-gray-800 flex items-center gap-2"><i class="fa-solid fa-ban text-red-500"></i> Từ chối tin đăng</h3>
-            <button onclick="closeModal('modal-reject')" class="text-gray-400 hover:text-gray-700 transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <button onclick="closeModal('modal-reject')" class="text-gray-400 hover:text-gray-700 transition outline-none"><i class="fa-solid fa-xmark text-xl"></i></button>
         </div>
         <form action="{{ route('admin.products.reject', $product->id) }}" method="POST" class="p-6 space-y-4">
             @csrf @method('PATCH')
@@ -340,7 +358,7 @@
     <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden flex flex-col transform transition-all">
         <div class="p-6 border-b border-gray-100 bg-purple-50/30 flex justify-between items-center">
             <h3 class="text-xl font-black text-gray-800 flex items-center gap-2"><i class="fa-solid fa-arrow-up text-purple-600"></i> Cấu hình Đẩy tin</h3>
-            <button onclick="closeModal('modal-push')" class="text-gray-400 hover:text-gray-700 transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <button onclick="closeModal('modal-push')" class="text-gray-400 hover:text-gray-700 transition outline-none"><i class="fa-solid fa-xmark text-xl"></i></button>
         </div>
         <form action="{{ route('admin.products.push', $product->id) }}" method="POST" class="p-6 space-y-4">
             @csrf @method('PATCH')
@@ -358,12 +376,12 @@
                 </div>
             </div>
 
-            @if($product->pushed_until && $product->pushed_until > now())
+            @if($product->pushed_until && \Carbon\Carbon::parse($product->pushed_until)->isFuture())
             <div class="bg-purple-50 border border-purple-100 p-3 rounded-xl flex items-start gap-2 mt-4">
                 <i class="fa-solid fa-circle-info text-purple-500 mt-0.5"></i>
                 <div>
                     <p class="text-xs font-bold text-purple-700">Tin đang được đẩy!</p>
-                    <p class="text-[11px] text-purple-600 mt-0.5">Sẽ hết hạn vào lúc: {{ $product->pushed_until->format('d/m/Y H:i') }}</p>
+                    <p class="text-[11px] text-purple-600 mt-0.5">Sẽ hết hạn vào lúc: {{ \Carbon\Carbon::parse($product->pushed_until)->format('d/m/Y H:i') }}</p>
                 </div>
             </div>
             @endif
@@ -381,7 +399,7 @@
 
 @section('scripts')
 <script>
-    // Bật/tắt Modal mượt mà với khóa cuộn nền
+    // Bật/tắt Modal mượt mà
     function openModal(id) { 
         document.getElementById(id).classList.remove('hidden'); 
         document.body.style.overflow = 'hidden';
@@ -391,7 +409,6 @@
         document.body.style.overflow = 'auto';
     }
 
-    // Logic chọn ngày đẩy tin
     function selectDays(days, btn) {
         document.getElementById('push-days').value = days;
         document.querySelectorAll('.push-day-btn').forEach(b => {
@@ -400,6 +417,50 @@
         });
         btn.classList.remove('border-gray-100', 'text-gray-500');
         btn.classList.add('border-purple-500', 'bg-purple-50', 'text-purple-700', 'shadow-sm');
+    }
+
+    // JS CHUYỂN ẢNH SẢN PHẨM
+    const images = [
+        @if($product->images && $product->images->count() > 0)
+            @foreach($product->images as $img)
+            "{{ asset('storage/' . $img->image_path) }}",
+            @endforeach
+        @endif
+    ];
+    let currentIndex = 0;
+
+    function changeImage(src, element, index) {
+        currentIndex = index;
+        document.getElementById('main-display').src = src;
+        
+        document.querySelectorAll('.thumb-item').forEach(el => {
+            el.classList.remove('border-emerald-500', 'ring-2', 'ring-emerald-100', 'opacity-100');
+            el.classList.add('border-transparent', 'opacity-50');
+        });
+        
+        if (element) {
+            element.classList.remove('border-transparent', 'opacity-50');
+            element.classList.add('border-emerald-500', 'ring-2', 'ring-emerald-100', 'opacity-100');
+        }
+    }
+
+    function prevImg() {
+        if (images.length <= 1) return;
+        currentIndex = (currentIndex === 0) ? images.length - 1 : currentIndex - 1;
+        updateSlider();
+    }
+
+    function nextImg() {
+        if (images.length <= 1) return;
+        currentIndex = (currentIndex === images.length - 1) ? 0 : currentIndex + 1;
+        updateSlider();
+    }
+
+    function updateSlider() {
+        const thumbElements = document.querySelectorAll('.thumb-item');
+        if (thumbElements.length > 0) {
+            changeImage(images[currentIndex], thumbElements[currentIndex], currentIndex);
+        }
     }
 </script>
 @endsection

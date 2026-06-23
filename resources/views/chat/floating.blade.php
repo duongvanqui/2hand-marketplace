@@ -41,7 +41,6 @@
             </div>
         </div>
         
-        {{-- THÊM ID ĐỂ QUẢN LÝ DANH SÁCH --}}
         <div id="chat-list-container" class="flex-1 overflow-y-auto no-scrollbar p-2.5 space-y-1.5">
             @if($myConversations->isEmpty())
                 <div class="text-center text-gray-400 h-full flex flex-col items-center justify-center">
@@ -55,6 +54,11 @@
                     @php
                         $isBuyer = $conv->buyer_id === Auth::id();
                         $partner = $isBuyer ? $conv->seller : $conv->buyer;
+                        
+                        // ĐÃ SỬA LỖI SẬP WEB DO NULL USER
+                        $partnerName = $partner ? $partner->name : 'Người dùng đã xóa';
+                        $partnerAvatar = ($partner && $partner->avatar) ? asset('storage/' . $partner->avatar) : null;
+                        
                         $unreadInConv = \App\Models\Message::where('conversation_id', $conv->id)->where('sender_id', '!=', Auth::id())->where('is_read', false)->count();
                         
                         $roleText = $conv->product ? ($isBuyer ? 'Người bán' : 'Người mua') : '';
@@ -66,21 +70,21 @@
                     
                     <div @click="initChat({{ $conv->id }}, {{ $locked ? 'true' : 'false' }})" 
                          id="gconv-{{ $conv->id }}"
-                         data-name="{{ $partner->name }}"
+                         data-name="{{ $partnerName }}"
                          class="global-conv-item p-3 rounded-2xl border-2 border-transparent hover:border-emerald-100 hover:bg-emerald-50/50 cursor-pointer transition-all flex items-center gap-3 relative group">
 
-                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-100 to-teal-50 text-emerald-700 flex items-center justify-center font-black text-base shrink-0 border-2 border-white shadow-sm overflow-hidden">
-                            @if($partner->avatar)
-                                <img src="{{ asset('storage/' . $partner->avatar) }}" class="w-full h-full object-cover">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-100 to-teal-50 text-emerald-700 flex items-center justify-center font-black text-base shrink-0 border-2 border-white shadow-sm overflow-hidden uppercase">
+                            @if($partnerAvatar)
+                                <img src="{{ $partnerAvatar }}" class="w-full h-full object-cover">
                             @else
-                                {{ substr($partner->name, 0, 1) }}
+                                {{ substr($partnerName, 0, 1) }}
                             @endif
                         </div>
 
                         <div class="flex-1 overflow-hidden space-y-1">
                             <div class="flex justify-between items-center">
                                 <div class="flex items-center gap-1.5 truncate pr-1">
-                                    <h4 class="font-black text-gray-900 text-sm truncate">{{ $partner->name }}</h4>
+                                    <h4 class="font-black text-gray-900 text-sm truncate">{{ $partnerName }}</h4>
                                     @if($unreadInConv > 0)
                                         <span id="floating-unread-badge-{{ $conv->id }}" class="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full leading-none shrink-0 shadow-sm animate-pulse border border-white">
                                             {{ $unreadInConv > 99 ? '99+' : $unreadInConv }}
@@ -158,15 +162,20 @@
         </div>
 
         <form @submit.prevent="sendMsg" x-show="!isLocked" enctype="multipart/form-data" class="px-5 py-4 border-t-2 border-gray-100 bg-white flex items-center gap-3 shrink-0">
-            <label class="p-2.5 bg-blue-50 border-2 border-blue-200 text-blue-500 hover:text-blue-600 hover:bg-blue-100 hover:border-blue-300 rounded-xl cursor-pointer transition-all shadow-sm flex items-center justify-center" :class="{'opacity-50 pointer-events-none': !activeConv}" title="Gửi ảnh">
+            <label class="p-2.5 bg-blue-50 border-2 border-blue-200 text-blue-500 hover:text-blue-600 hover:bg-blue-100 hover:border-blue-300 rounded-xl cursor-pointer transition-all shadow-sm flex items-center justify-center" :class="{'opacity-50 pointer-events-none': !activeConv || isSending}" title="Gửi ảnh">
                 <i class="fa-solid fa-camera-retro text-lg"></i>
-                <input type="file" id="global-image-input" accept="image/*" class="hidden" @change="handleImageSelect" :disabled="!activeConv">
+                <input type="file" id="global-image-input" accept="image/*" class="hidden" @change="handleImageSelect" :disabled="!activeConv || isSending">
             </label>
 
-            <input type="text" x-model="text" :disabled="!activeConv" class="flex-grow bg-white border-2 border-gray-200 rounded-2xl px-5 py-3 text-sm font-medium focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none disabled:opacity-50 transition-all shadow-sm" placeholder="Viết tin nhắn..." autocomplete="off">
+            <input type="text" x-model="text" :disabled="!activeConv || isSending" class="flex-grow bg-white border-2 border-gray-200 rounded-2xl px-5 py-3 text-sm font-medium focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none disabled:opacity-50 transition-all shadow-sm" placeholder="Viết tin nhắn..." autocomplete="off">
             
-            <button type="submit" :disabled="!activeConv || (!text && !imageFile)" class="p-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl shadow-md shadow-emerald-200/50 hover:from-emerald-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:shadow-none flex items-center justify-center transform hover:-translate-y-0.5 active:translate-y-0">
-                <i class="fa-solid fa-paper-plane text-lg ml-[-2px] mt-[2px]"></i>
+            <button type="submit" :disabled="!activeConv || isSending || (!text.trim() && !imageFile)" class="p-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl shadow-md shadow-emerald-200/50 hover:from-emerald-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:shadow-none flex items-center justify-center transform hover:-translate-y-0.5 active:translate-y-0">
+                <template x-if="!isSending">
+                    <i class="fa-solid fa-paper-plane text-lg ml-[-2px] mt-[2px]"></i>
+                </template>
+                <template x-if="isSending">
+                    <i class="fa-solid fa-spinner fa-spin text-lg ml-[-2px] mt-[2px]"></i>
+                </template>
             </button>
         </form>
     </div>
@@ -180,6 +189,7 @@
             text: '',
             imageFile: null,
             imagePreview: null,
+            isSending: false, // ĐÃ SỬA: Thêm trạng thái Loading
             myId: {{ auth()->id() ?? 'null' }},
             partnerName: 'Hộp thư tin nhắn',
             isLocked: false,
@@ -256,7 +266,6 @@
                     });
             },
 
-            // TÍNH NĂNG "GỌI HỒN": Xử lý khi có tin nhắn từ người lạ hoắc
             handleIncomingMessage(msg) {
                 if (this.activeConv === msg.conversation_id && this.isChatOpen) {
                     this.appendMsg(msg, false);
@@ -264,7 +273,6 @@
                 } else {
                     const convItem = document.getElementById('gconv-' + msg.conversation_id);
                     if (convItem) {
-                        // Người này có trong list -> Gắn chấm đỏ & Đẩy lên đầu
                         let badge = document.getElementById('floating-unread-badge-' + msg.conversation_id);
                         if (badge) {
                             let current = parseInt(badge.innerText.replace('+', '')) || 0;
@@ -278,32 +286,31 @@
                         }
                         convItem.parentNode.prepend(convItem);
                     } else {
-                        // BẮT ĐƯỢC NGƯỜI LẠ: Tự động vẽ thẻ HTML mới và nhét vào đầu danh sách
                         const list = document.getElementById('chat-list-container');
                         if(list.querySelector('.text-center.text-gray-400')) {
-                            list.innerHTML = ''; // Gỡ chữ "Hộp thư trống"
+                            list.innerHTML = ''; 
                         }
                         
-                        // Lấy ảnh avatar
-                        const avatarHtml = msg.sender.avatar 
+                        // ĐÃ SỬA: Xử lý an toàn trường hợp sender bị null
+                        const senderName = msg.sender ? msg.sender.name : 'Người lạ';
+                        const avatarHtml = (msg.sender && msg.sender.avatar) 
                             ? `<img src="/storage/${msg.sender.avatar}" class="w-full h-full object-cover">`
-                            : `${msg.sender.name.charAt(0)}`;
+                            : `${senderName.charAt(0)}`;
                             
-                        // Xây dựng thẻ HTML
                         const newHtml = `
-                            <div onclick="window.dispatchEvent(new CustomEvent('load-conversation', { detail: { convId: ${msg.conversation_id}, partnerName: '${msg.sender.name}' } }))" 
+                            <div onclick="window.dispatchEvent(new CustomEvent('load-conversation', { detail: { convId: ${msg.conversation_id}, partnerName: '${senderName}' } }))" 
                                  id="gconv-${msg.conversation_id}"
-                                 data-name="${msg.sender.name}"
+                                 data-name="${senderName}"
                                  class="global-conv-item p-3 rounded-2xl border-2 border-transparent hover:border-emerald-100 hover:bg-emerald-50/50 cursor-pointer transition-all flex items-center gap-3 relative group">
 
-                                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-100 to-teal-50 text-emerald-700 flex items-center justify-center font-black text-base shrink-0 border-2 border-white shadow-sm overflow-hidden">
+                                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-100 to-teal-50 text-emerald-700 flex items-center justify-center font-black text-base shrink-0 border-2 border-white shadow-sm overflow-hidden uppercase">
                                     ${avatarHtml}
                                 </div>
 
                                 <div class="flex-1 overflow-hidden space-y-1">
                                     <div class="flex justify-between items-center">
                                         <div class="flex items-center gap-1.5 truncate pr-1">
-                                            <h4 class="font-black text-gray-900 text-sm truncate">${msg.sender.name}</h4>
+                                            <h4 class="font-black text-gray-900 text-sm truncate">${senderName}</h4>
                                             <span id="floating-unread-badge-${msg.conversation_id}" class="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full leading-none shrink-0 shadow-sm animate-pulse border border-white">1</span>
                                         </div>
                                     </div>
@@ -313,7 +320,6 @@
                                 </div>
                             </div>
                         `;
-                        // Nhét lên trên cùng
                         list.insertAdjacentHTML('afterbegin', newHtml);
                     }
                 }
@@ -359,15 +365,16 @@
                 document.getElementById('global-image-input').value = '';
             },
 
+            // ĐÃ SỬA LỖI MẤT CHỮ TRƯỚC KHI GỬI & THÊM HIỆU ỨNG LOADING
             sendMsg() {
-                if((!this.text.trim() && !this.imageFile) || !this.activeConv || this.isLocked) return;
+                if((!this.text.trim() && !this.imageFile) || !this.activeConv || this.isLocked || this.isSending) return;
                 
                 let formData = new FormData();
                 if(this.text.trim()) formData.append('message', this.text.trim());
                 if(this.imageFile) formData.append('image', this.imageFile);
 
-                this.text = ''; 
-                this.removeImage();
+                // Khóa form hiển thị loading
+                this.isSending = true;
 
                 fetch(`/chat/${this.activeConv}/messages`, {
                     method: 'POST',
@@ -377,15 +384,36 @@
                     },
                     body: formData
                 })
-                .then(res => res.json())
+                .then(async res => {
+                    const data = await res.json();
+                    if (!res.ok) throw data;
+                    return data;
+                })
                 .then(data => {
-                    if (data.status === 'success') {
-                        this.appendMsg(data.message, true);
-                    } else if (data.error) {
-                        alert('Lỗi gửi tin: ' + data.error);
+                    this.isSending = false;
+                    if (data.status === 'success' || data.success) {
+                        const msgData = data.message || data.data;
+                        if(msgData) this.appendMsg(msgData, true);
+                        
+                        // CHỈ XÓA NỘI DUNG KHI CHẮC CHẮN ĐÃ GỬI XONG
+                        this.text = ''; 
+                        this.removeImage();
+                    } else {
+                        alert('Lỗi gửi tin: ' + (data.error || data.message || 'Không rõ nguyên nhân'));
                     }
                 })
-                .catch(() => alert('Lỗi gửi tin nhắn hoặc ảnh!'));
+                .catch(err => {
+                    this.isSending = false;
+                    let errMsg = 'Đường truyền gián đoạn hoặc tệp ảnh không đúng định dạng!';
+                    if (err && err.errors) {
+                        errMsg = Object.values(err.errors).flat().join('\n');
+                    } else if (err && err.message) {
+                        errMsg = err.message;
+                    } else if (err && err.error) {
+                        errMsg = err.error;
+                    }
+                    alert("Gửi thất bại: \n" + errMsg);
+                });
             },
 
             deleteChat() {
@@ -415,9 +443,6 @@
         }));
     });
 
-    // ==========================================
-    // LẮNG NGHE SÓNG KÊNH CÁ NHÂN (TÓM GỌN TẤT CẢ)
-    // ==========================================
     window.syncUnreadCount = function() {
         fetch('/chat/unread-count')
             .then(res => res.json())
@@ -430,7 +455,6 @@
         const myId = {{ auth()->id() ?? 'null' }};
 
         if (typeof window.Echo !== 'undefined' && myId) {
-            // [CẬP NHẬT CỐT LÕI]: Chỉ lắng nghe 1 sóng duy nhất là User ID của bạn
             window.Echo.private(`user.${myId}`)
                 .listen('.message.sent', (e) => {
                     if (e.message.sender_id !== myId) {

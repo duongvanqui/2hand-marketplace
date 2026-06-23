@@ -1,7 +1,22 @@
 @extends('layouts.admin')
 
 @section('title', 'Ví 2HAND của bạn')
-@section('header_title', 'Quản lý Ví 2HAND')
+
+{{-- ĐÃ SỬA: Bổ sung thanh điều hướng Breadcrumb để lấp khoảng trống --}}
+@section('header_title')
+<div class="flex flex-col">
+    <span class="text-2xl font-black text-gray-900 tracking-tight">
+        Quản lý Ví 2HAND
+    </span>
+    <div class="text-sm text-gray-500 font-medium mt-1 flex items-center gap-2">
+        <a href="{{ url('/') }}" class="hover:text-emerald-600 transition-colors">Trang chủ</a>
+        <i class="fa-solid fa-angle-right text-[10px] text-gray-400 mx-1"></i>
+        <a href="{{ route('dashboard') }}" class="hover:text-emerald-600 transition-colors">Quản lý cá nhân</a>
+        <i class="fa-solid fa-angle-right text-[10px] text-gray-400 mx-1"></i>
+        <span class="text-gray-900 font-bold">Ví 2HAND</span>
+    </div>
+</div>
+@endsection
 
 @section('content')
 <div class="pb-10">
@@ -68,22 +83,26 @@
                             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                 <span class="text-gray-400 font-bold">₫</span>
                             </div>
+                            {{-- ĐÃ SỬA: Tự động khóa ô nhập nếu số dư không đủ --}}
                             <input type="number" name="amount" min="50000" max="{{ $user->balance }}" required 
-                                class="w-full pl-10 pr-4 py-3 bg-gray-50/80 border border-gray-200 rounded-xl outline-none focus:bg-white focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all font-bold text-gray-800" 
+                                {{ $user->balance < 50000 ? 'disabled' : '' }}
+                                class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl outline-none transition-all font-bold text-gray-800 {{ $user->balance < 50000 ? 'bg-gray-100 cursor-not-allowed text-gray-400' : 'bg-gray-50/80 focus:bg-white focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50' }}" 
                                 placeholder="VD: 100000">
                         </div>
                     </div>
 
                     <div>
                         <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Thông tin nhận tiền</label>
+                        {{-- ĐÃ SỬA: Tự động khóa textarea nếu số dư không đủ --}}
                         <textarea name="bank_info" required rows="3" 
-                            class="w-full mt-1.5 p-4 bg-gray-50/80 border border-gray-200 rounded-xl outline-none focus:bg-white focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all text-sm text-gray-800 resize-none" 
+                            {{ $user->balance < 50000 ? 'disabled' : '' }}
+                            class="w-full mt-1.5 p-4 border border-gray-200 rounded-xl outline-none transition-all text-sm text-gray-800 resize-none {{ $user->balance < 50000 ? 'bg-gray-100 cursor-not-allowed text-gray-400' : 'bg-gray-50/80 focus:bg-white focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50' }}" 
                             placeholder="VD: Vietcombank&#10;STK: 0123456789&#10;Tên: DUONG VAN QUI"></textarea>
                     </div>
 
                     <button type="submit" 
                         class="w-full font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2
-                        {{ $user->balance < 50000 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-lg shadow-emerald-200 transform hover:-translate-y-0.5' }}" 
+                        {{ $user->balance < 50000 ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200' : 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-lg shadow-emerald-200 transform hover:-translate-y-0.5' }}" 
                         {{ $user->balance < 50000 ? 'disabled' : '' }}>
                         <i class="fa-solid fa-paper-plane"></i> Gửi Yêu Cầu Rút
                     </button>
@@ -149,7 +168,6 @@
                                     <i class="fa-solid fa-arrow-down-long text-lg"></i>
                                 </div>
                                 <div class="max-w-[150px] sm:max-w-[250px] lg:max-w-[300px]">
-                                    {{-- [ĐÃ SỬA TẠI ĐÂY] Kiểm tra an toàn cho sản phẩm có thể đã bị xóa --}}
                                     <p class="font-bold text-gray-800 text-sm md:text-base leading-tight truncate">
                                         Tiền hàng: {{ $order->product ? $order->product->title : 'Sản phẩm đã bị xóa khỏi hệ thống' }}
                                     </p>
@@ -166,7 +184,7 @@
                     {{-- TRẠNG THÁI TRỐNG --}}
                     @if($withdrawals->isEmpty() && $incomeHistory->isEmpty())
                         <div class="text-center py-16 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 h-full flex flex-col items-center justify-center">
-                            <div class="w-20 h-20 bg-white rounded-full shadow-sm flex items-center justify-center mb-4">
+                            <div class="w-20 h-20 bg-white rounded-full shadow-sm flex items-center justify-center mb-4 border border-gray-100">
                                 <i class="fa-solid fa-receipt text-4xl text-gray-300"></i>
                             </div>
                             <h4 class="font-bold text-gray-700 mb-1">Chưa có giao dịch</h4>

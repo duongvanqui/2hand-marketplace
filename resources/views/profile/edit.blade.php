@@ -1,7 +1,22 @@
 @extends('layouts.admin')
 
 @section('title', 'Cài đặt tài khoản - 2HAND')
-@section('header_title', 'Cài đặt tài khoản cá nhân')
+
+{{-- ĐÃ SỬA: Mở rộng Header Title để thêm dòng điều hướng (Breadcrumb) phía dưới --}}
+@section('header_title')
+<div class="flex flex-col">
+    <span class="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+        Cài đặt tài khoản cá nhân
+    </span>
+    <div class="text-sm text-gray-500 font-medium mt-1 flex items-center gap-2">
+        <a href="{{ url('/') }}" class="hover:text-emerald-600 transition-colors">Trang chủ</a>
+        <i class="fa-solid fa-angle-right text-[10px] text-gray-400 mx-1"></i>
+        <a href="{{ route('dashboard') }}" class="hover:text-emerald-600 transition-colors">Quản lý cá nhân</a>
+        <i class="fa-solid fa-angle-right text-[10px] text-gray-400 mx-1"></i>
+        <span class="text-gray-900 font-bold">Cài đặt tài khoản</span>
+    </div>
+</div>
+@endsection
 
 @section('content')
 <div class="pb-10">

@@ -6,7 +6,7 @@ use App\Events\MessageSent;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
-use App\Models\Product; // Đã thêm import Product
+use App\Models\Product; 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -56,12 +56,9 @@ class ChatController extends Controller
         }
 
         // --------------------------------------------------------
-        // [TÍNH NĂNG MỚI]: KHÓA CHAT KHI SẢN PHẨM ĐÃ BÁN
-        // Kiểm tra xem phòng chat này có gắn với sản phẩm không
-        // Giả định cột trạng thái trong Database của bạn là 'status' và có giá trị 'sold'
+        // KHÓA CHAT KHI SẢN PHẨM ĐÃ BÁN
         // --------------------------------------------------------
         if ($conversation->product && $conversation->product->status === 'sold') {
-            // Nếu người đang chat KHÔNG PHẢI là người đã mua thành công sản phẩm này
             if ($conversation->buyer_id != $conversation->product->buyer_id) {
                 return response()->json(['error' => 'Sản phẩm này đã được bán. Phòng chat đã bị đóng!'], 403);
             }
@@ -73,10 +70,11 @@ class ChatController extends Controller
             $imagePath = $request->file('image')->store('chat_images', 'public');
         }
 
+        // ĐÃ FIX LỖI SẬP DATABASE: Dùng fallback `?? ''` để nhét chuỗi rỗng thay vì NULL nếu chỉ gửi ảnh
         $message = Message::create([
             'conversation_id' => $conversation->id,
             'sender_id' => Auth::id(),
-            'message' => $request->message,
+            'message' => $request->message ?? '', 
             'image_path' => $imagePath,
         ]);
 
@@ -114,7 +112,7 @@ class ChatController extends Controller
         return response()->json([
             'success' => true,
             'conversation_id' => $conversation->id,
-            'partner_name' => $product->user->name // Trả về tên chủ shop để hiển thị trên UI
+            'partner_name' => $product->user->name 
         ]);
     }
 
@@ -139,7 +137,7 @@ class ChatController extends Controller
         return response()->json([
             'success' => true, 
             'conversation_id' => $conversation->id,
-            'partner_name' => $user->name // Trả về tên đối tác
+            'partner_name' => $user->name 
         ]);
     }
 
@@ -176,7 +174,6 @@ class ChatController extends Controller
         $conversation->messages()->delete();
         $conversation->delete();
 
-        // Trả về JSON vì giao diện mới của chúng ta đang dùng Javascript Fetch (AJAX) để xóa ngầm
         return response()->json(['success' => true, 'message' => 'Đã xóa đoạn chat thành công!']);
     }
 

@@ -46,7 +46,7 @@ class ProductController extends Controller
         // Sắp xếp ưu tiên các tin đang được "Đẩy lên"
         $products = $query->orderByRaw('pushed_until > NOW() DESC')
                           ->latest()
-                          ->paginate(12);
+                          ->paginate(15);
 
         $rootCategories = Category::whereNull('parent_id')->get();
 
